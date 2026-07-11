@@ -8,10 +8,10 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <!-- Theme Color for mobile browsers -->
-  <meta name="theme-color" content="#121824">
+  <meta name="theme-color" content="#f1f5f9">
   <!-- iOS web app capability -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
   <link rel="stylesheet" href="app.css">
@@ -258,12 +258,37 @@
   <script src="charts.js"></script>
   <script src="app.js"></script>
   <script>
-    // PWA Service Worker 登録
+    // PWA Service Worker 登録と自動更新検知
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js')
-          .then(reg => console.log('Service Worker registered successfully.', reg.scope))
+          .then(reg => {
+            console.log('Service Worker registered successfully.', reg.scope);
+            
+            // 新規アップデートの検出
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    // 古いバージョンがアクティブな状態で、新しいSWがインストール完了
+                    console.log('New app version detected. Force refreshing...');
+                    window.location.reload();
+                  }
+                }
+              };
+            };
+          })
           .catch(err => console.log('Service Worker registration failed:', err));
+      });
+
+      // サービスワーカーが切り替わった瞬間に自動リロード
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
       });
     }
   </script>

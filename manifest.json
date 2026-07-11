@@ -4,8 +4,8 @@
   "description": "リハビリテーション評価の記録、採点アシスト、および下位項目レベルでの経時的グラフ推移を見える化するスマホ管理アプリ。",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#121824",
-  "theme_color": "#0ea5e9",
+  "background_color": "#f1f5f9",
+  "theme_color": "#f1f5f9",
   "orientation": "portrait-primary",
   "icons": [
     {
