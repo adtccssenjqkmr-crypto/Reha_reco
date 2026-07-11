@@ -84,6 +84,16 @@ function switchView(viewId, pushToStack = true) {
   }
   state.currentView = viewId;
 
+  // FABボタンの表示制御 (患者一覧の時のみ表示)
+  const fab = document.getElementById("btn-add-patient-fab");
+  if (fab) {
+    if (viewId === "view-patients") {
+      fab.style.display = "flex";
+    } else {
+      fab.style.display = "none";
+    }
+  }
+
   // ヘッダーアクション（戻るボタンなど）の制御
   renderHeaderAction();
 }
@@ -161,6 +171,16 @@ function setupEventListeners() {
   // 患者モーダルの閉じるボタン類
   document.getElementById("btn-close-patient-modal").addEventListener("click", hidePatientModal);
   document.getElementById("btn-cancel-patient").addEventListener("click", hidePatientModal);
+
+  const deletePatientBtn = document.getElementById("btn-delete-patient");
+  if (deletePatientBtn) {
+    deletePatientBtn.addEventListener("click", () => {
+      const index = parseInt(document.getElementById("patient-index").value);
+      if (index >= 0) {
+        handlePatientDelete(index);
+      }
+    });
+  }
 
   // 履歴詳細モーダルの閉じるボタン類
   document.getElementById("btn-close-history-modal").addEventListener("click", () => hideModal("history-detail-modal"));
@@ -294,6 +314,7 @@ function showPatientModal(index = -1) {
   const modal = document.getElementById("patient-modal");
   const form = document.getElementById("patient-form");
   const title = document.getElementById("patient-modal-title");
+  const deleteBtn = document.getElementById("btn-delete-patient");
   
   form.reset();
   document.getElementById("patient-index").value = index;
@@ -307,9 +328,11 @@ function showPatientModal(index = -1) {
     document.getElementById("patient-gender").value = p.gender || "";
     document.getElementById("patient-diagnosis").value = p.diagnosis || "";
     document.getElementById("patient-memo").value = p.memo || "";
+    if (deleteBtn) deleteBtn.style.display = "inline-block";
   } else {
     title.textContent = "新規対象者登録";
     document.getElementById("patient-id").disabled = false;
+    if (deleteBtn) deleteBtn.style.display = "none";
   }
 
   modal.classList.add("active");
@@ -317,6 +340,25 @@ function showPatientModal(index = -1) {
 
 function hidePatientModal() {
   document.getElementById("patient-modal").classList.remove("active");
+}
+
+function handlePatientDelete(index) {
+  const p = state.patients[index];
+  if (!p) return;
+
+  if (confirm(`本当に対象者「ID: ${p.id}」を削除しますか？\n※この対象者に関する過去すべての評価記録も完全に削除されます。この操作は取り消せません。`)) {
+    if (confirm("【最終確認】本当に削除してもよろしいですか？")) {
+      state.patients.splice(index, 1);
+      savePatients();
+      hidePatientModal();
+      renderPatientsList();
+      
+      // もし現在詳細画面にいる場合は、患者一覧に戻る
+      if (state.currentView === "view-patient-detail") {
+        switchView("view-patients");
+      }
+    }
+  }
 }
 
 function handlePatientSubmit(e) {

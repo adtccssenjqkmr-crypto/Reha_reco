@@ -48,9 +48,6 @@
       <div id="patients-container">
         <!-- 患者カードがここに動的に生成されます -->
       </div>
-
-      <!-- 新規患者追加 FAB -->
-      <button class="fab" id="btn-add-patient-fab" aria-label="新規対象者登録">＋</button>
     </section>
 
     <!-- VIEW 2: 患者詳細 (履歴 & グラフ) -->
@@ -225,9 +222,10 @@
           <label for="patient-memo">メモ</label>
           <textarea id="patient-memo" class="form-control" rows="3" placeholder="麻痺側、リハビリ目的など"></textarea>
         </div>
-        <div class="flex-row">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-patient">キャンセル</button>
-          <button type="submit" class="btn" id="btn-save-patient">登録する</button>
+        <div class="flex-row" style="gap: 8px;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-patient" style="flex: 1;">キャンセル</button>
+          <button type="button" class="btn btn-danger" id="btn-delete-patient" style="display: none; flex: 1; background-color: var(--accent-danger); color: white;">削除する</button>
+          <button type="submit" class="btn" id="btn-save-patient" style="flex: 1;">保存する</button>
         </div>
       </form>
     </div>
@@ -292,5 +290,7 @@
       });
     }
   </script>
+  <!-- 新規患者追加 FAB -->
+  <button class="fab" id="btn-add-patient-fab" aria-label="新規対象者登録">＋</button>
 </body>
 </html>
