@@ -341,17 +341,17 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
         display: true,
         position: "top",
         labels: {
-          color: "#f8fafc",
+          color: "#0f172a",
           font: { family: "Inter", size: 12 }
         }
       },
       tooltip: {
         mode: "index",
         intersect: false,
-        backgroundColor: "#1e293b",
-        titleColor: "#f8fafc",
-        bodyColor: "#f8fafc",
-        borderColor: "rgba(255,255,255,0.1)",
+        backgroundColor: "#ffffff",
+        titleColor: "#0f172a",
+        bodyColor: "#0f172a",
+        borderColor: "rgba(15, 23, 42, 0.1)",
         borderWidth: 1,
         callbacks: {
           label: function(context) {
@@ -380,13 +380,13 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
     },
     scales: {
       x: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
-        ticks: { color: "#94a3b8", font: { family: "Inter" } }
+        grid: { color: "rgba(15, 23, 42, 0.05)" },
+        ticks: { color: "#475569", font: { family: "Inter" } }
       },
       y: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
+        grid: { color: "rgba(15, 23, 42, 0.05)" },
         ticks: {
-          color: "#94a3b8",
+          color: "#475569",
           font: { family: "Inter" },
           // BRSの場合はY軸をStage名にする
           callback: function(value) {
