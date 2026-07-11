@@ -1,0 +1,18 @@
+{
+  "name": "リハレコ - リハビリテーション評価記録管理",
+  "short_name": "リハレコ",
+  "description": "リハビリテーション評価の記録、採点アシスト、および下位項目レベルでの経時的グラフ推移を見える化するスマホ管理アプリ。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121824",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

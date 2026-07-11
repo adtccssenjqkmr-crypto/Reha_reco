@@ -1,0 +1,1951 @@
+/**
+ * app.js
+ * アプリケーションのステート管理、画面遷移、患者CRUD、動的フォーム生成、およびイベント制御
+ */
+
+// アプリケーションステート
+let state = {
+  patients: [],
+  customEvaluations: [],
+  currentPatientIndex: -1,
+  currentRecordIndex: -1,
+  currentView: "view-patients",
+  historyStack: [] // シンプルなビュー遷移履歴
+};
+
+// タイマーの状態管理
+let timerInterval = null;
+let timerStart = 0;
+let timerElapsed = 0;
+
+// アプリ初期化時の処理
+document.addEventListener("DOMContentLoaded", () => {
+  loadData();
+  setupEventListeners();
+  renderPatientsList();
+  renderCustomEvaluationsList();
+  
+  // デフォルトビューを設定
+  switchView("view-patients");
+});
+
+// ローカルストレージからデータをロード
+function loadData() {
+  try {
+    state.customEvaluations = JSON.parse(localStorage.getItem("rehareco_custom_evaluations") || "[]");
+    
+    const storedPatients = localStorage.getItem("rehareco_patients");
+    if (storedPatients) {
+      state.patients = JSON.parse(storedPatients);
+    } else {
+      // デモデータの自動生成
+      state.patients = getDemoData();
+      savePatients();
+    }
+  } catch (e) {
+    console.error("データの読み込みに失敗しました:", e);
+    state.patients = [];
+    state.customEvaluations = [];
+  }
+}
+
+// ローカルストレージにデータを保存
+function savePatients() {
+  localStorage.setItem("rehareco_patients", JSON.stringify(state.patients));
+}
+
+function saveCustomEvaluations() {
+  localStorage.setItem("rehareco_custom_evaluations", JSON.stringify(state.customEvaluations));
+}
+
+// 画面切り替えルーター
+function switchView(viewId, pushToStack = true) {
+  const views = document.querySelectorAll(".app-view");
+  views.forEach(v => v.classList.remove("active"));
+  
+  const targetView = document.getElementById(viewId);
+  if (targetView) {
+    targetView.classList.add("active");
+    targetView.classList.add("slide-in");
+  }
+  
+  // ナビゲーションアクティブ状態の変更
+  const navItems = document.querySelectorAll(".nav-item");
+  navItems.forEach(item => {
+    if (item.getAttribute("data-view") === viewId) {
+      item.classList.add("active");
+    } else {
+      item.classList.remove("active");
+    }
+  });
+
+  if (pushToStack && state.currentView !== viewId) {
+    state.historyStack.push(state.currentView);
+  }
+  state.currentView = viewId;
+
+  // ヘッダーアクション（戻るボタンなど）の制御
+  renderHeaderAction();
+}
+
+// 前の画面に戻る
+function goBack() {
+  if (state.historyStack.length > 0) {
+    const prevView = state.historyStack.pop();
+    switchView(prevView, false);
+  } else {
+    switchView("view-patients", false);
+  }
+}
+
+// ヘッダーの状況に応じたボタン制御
+function renderHeaderAction() {
+  const container = document.getElementById("header-action");
+  container.innerHTML = "";
+
+  if (state.currentView !== "view-patients") {
+    const backBtn = document.createElement("button");
+    backBtn.className = "btn btn-secondary";
+    backBtn.style.padding = "6px 12px";
+    backBtn.style.fontSize = "13px";
+    backBtn.style.width = "auto";
+    backBtn.textContent = "戻る";
+    backBtn.addEventListener("click", goBack);
+    container.appendChild(backBtn);
+  }
+}
+
+// イベントリスナーのセットアップ
+function setupEventListeners() {
+  // ボトムナビゲーション
+  document.querySelectorAll(".bottom-nav .nav-item").forEach(button => {
+    button.addEventListener("click", (e) => {
+      const viewId = button.getAttribute("data-view");
+      if (viewId) {
+        // 設定画面か患者一覧に切り替える
+        switchView(viewId);
+      }
+    });
+  });
+
+  // 検索機能
+  const searchInput = document.getElementById("patient-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      renderPatientsList(e.target.value);
+    });
+  }
+
+  // 患者追加 FAB
+  const addFab = document.getElementById("btn-add-patient-fab");
+  if (addFab) {
+    addFab.addEventListener("click", () => showPatientModal());
+  }
+
+  // 患者登録フォーム送信
+  const patientForm = document.getElementById("patient-form");
+  if (patientForm) {
+    patientForm.addEventListener("submit", handlePatientSubmit);
+  }
+
+  // 患者編集ボタン
+  const editPatientBtn = document.getElementById("btn-edit-patient");
+  if (editPatientBtn) {
+    editPatientBtn.addEventListener("click", () => {
+      if (state.currentPatientIndex >= 0) {
+        showPatientModal(state.currentPatientIndex);
+      }
+    });
+  }
+
+  // 患者モーダルの閉じるボタン類
+  document.getElementById("btn-close-patient-modal").addEventListener("click", hidePatientModal);
+  document.getElementById("btn-cancel-patient").addEventListener("click", hidePatientModal);
+
+  // 履歴詳細モーダルの閉じるボタン類
+  document.getElementById("btn-close-history-modal").addEventListener("click", () => hideModal("history-detail-modal"));
+  document.getElementById("btn-close-history-modal-ok").addEventListener("click", () => hideModal("history-detail-modal"));
+  
+  // 新規評価作成へ進むボタン
+  document.getElementById("btn-new-assessment").addEventListener("click", () => {
+    if (state.currentPatientIndex >= 0) {
+      showAssessmentSetup(state.currentPatientIndex);
+    }
+  });
+
+  // 評価開始ボタン (チェックリストから採点フォームへ)
+  document.getElementById("btn-start-scoring").addEventListener("click", startScoring);
+
+  // フォームからチェックリストに戻るボタン
+  document.getElementById("btn-back-to-select").addEventListener("click", () => {
+    document.getElementById("assessment-step-form").style.display = "none";
+    document.getElementById("assessment-step-select").style.display = "block";
+  });
+
+  // 評価記録保存
+  const assessmentForm = document.getElementById("active-assessment-form");
+  if (assessmentForm) {
+    assessmentForm.addEventListener("submit", handleAssessmentSubmit);
+  }
+
+  // カスタム評価項目追加フォーム
+  const customEvalForm = document.getElementById("custom-eval-form");
+  if (customEvalForm) {
+    customEvalForm.addEventListener("submit", handleCustomEvalSubmit);
+  }
+
+  // グラフフィルター変更時の描画更新
+  const chartEvalSelect = document.getElementById("chart-eval-select");
+  const chartSubitemSelect = document.getElementById("chart-subitem-select");
+
+  if (chartEvalSelect) {
+    chartEvalSelect.addEventListener("change", (e) => {
+      updateChartSubitemDropdown(e.target.value);
+      triggerChartUpdate();
+    });
+  }
+
+  if (chartSubitemSelect) {
+    chartSubitemSelect.addEventListener("change", triggerChartUpdate);
+  }
+
+  // データ管理関連
+  document.getElementById("btn-export").addEventListener("click", exportData);
+  
+  const importTrigger = document.getElementById("btn-import-trigger");
+  const fileImport = document.getElementById("file-import");
+  
+  if (importTrigger && fileImport) {
+    importTrigger.addEventListener("click", () => fileImport.click());
+    fileImport.addEventListener("change", importData);
+  }
+
+  document.getElementById("btn-clear-all").addEventListener("click", clearAllData);
+  
+  // 記録削除ボタン
+  document.getElementById("btn-delete-record").addEventListener("click", deleteCurrentRecord);
+}
+
+// -------------------------------------------------------------
+// 患者管理 (CRUD) ロジック
+// -------------------------------------------------------------
+
+function renderPatientsList(query = "") {
+  const container = document.getElementById("patients-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const q = query.toLowerCase().trim();
+  const filtered = state.patients.filter(p => {
+    return p.id.toLowerCase().includes(q) || 
+           (p.diagnosis && p.diagnosis.toLowerCase().includes(q)) ||
+           (p.memo && p.memo.toLowerCase().includes(q));
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="no-data">${query ? '検索結果が見つかりません。' : '対象者が登録されていません。右下の「＋」ボタンから追加してください。'}</div>`;
+    return;
+  }
+
+  filtered.forEach((patient, idx) => {
+    // 元の配列のインデックスを特定
+    const originalIndex = state.patients.indexOf(patient);
+    
+    // 直近の記録日
+    let lastDate = "記録なし";
+    let scoreSummary = "";
+    if (patient.records && patient.records.length > 0) {
+      // 日付順にソートして最新のものを取得
+      const sorted = [...patient.records].sort((a, b) => new Date(b.date) - new Date(a.date));
+      lastDate = sorted[0].date;
+      
+      // 主要なスコアがあればサマリー表示
+      const evals = sorted[0].evaluations;
+      const keys = Object.keys(evals);
+      if (keys.length > 0) {
+        scoreSummary = keys.slice(0, 2).map(k => {
+          const meta = PRESET_EVALUATIONS[k] || state.customEvaluations.find(c => c.id === k);
+          const name = meta ? meta.name.split("（")[0].split("(")[0] : k;
+          const val = evals[k].total !== undefined ? `${evals[k].total}点` : 
+                      evals[k].score !== undefined ? `${evals[k].score}` : 
+                      evals[k].time !== undefined ? `${evals[k].time}秒` : "記録あり";
+          return `${name}: ${val}`;
+        }).join(" / ");
+      }
+    }
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="card-title">
+        <span>${escapeHtml(patient.id)}</span>
+        <span class="card-badge">${escapeHtml(patient.diagnosis || "疾患名未登録")}</span>
+      </div>
+      <div class="card-meta">性別: ${escapeHtml(patient.gender || "未設定")} | 年齢: ${patient.age ? patient.age + '歳' : '未設定'}</div>
+      <div class="card-meta">最終測定日: ${lastDate}</div>
+      ${scoreSummary ? `<div class="card-meta" style="font-weight: 500; color: var(--accent-blue);">${scoreSummary}</div>` : ""}
+    `;
+    card.addEventListener("click", () => showPatientDetail(originalIndex));
+    container.appendChild(card);
+  });
+}
+
+function showPatientModal(index = -1) {
+  const modal = document.getElementById("patient-modal");
+  const form = document.getElementById("patient-form");
+  const title = document.getElementById("patient-modal-title");
+  
+  form.reset();
+  document.getElementById("patient-index").value = index;
+
+  if (index >= 0) {
+    title.textContent = "対象者情報の編集";
+    const p = state.patients[index];
+    document.getElementById("patient-id").value = p.id;
+    document.getElementById("patient-id").disabled = true; // IDは一意とするため編集不可に
+    document.getElementById("patient-age").value = p.age || "";
+    document.getElementById("patient-gender").value = p.gender || "";
+    document.getElementById("patient-diagnosis").value = p.diagnosis || "";
+    document.getElementById("patient-memo").value = p.memo || "";
+  } else {
+    title.textContent = "新規対象者登録";
+    document.getElementById("patient-id").disabled = false;
+  }
+
+  modal.classList.add("active");
+}
+
+function hidePatientModal() {
+  document.getElementById("patient-modal").classList.remove("active");
+}
+
+function handlePatientSubmit(e) {
+  e.preventDefault();
+  const index = parseInt(document.getElementById("patient-index").value);
+  const id = document.getElementById("patient-id").value.trim();
+  const age = document.getElementById("patient-age").value ? parseInt(document.getElementById("patient-age").value) : null;
+  const gender = document.getElementById("patient-gender").value;
+  const diagnosis = document.getElementById("patient-diagnosis").value.trim();
+  const memo = document.getElementById("patient-memo").value.trim();
+
+  if (!id) return;
+
+  if (index >= 0) {
+    // 既存編集
+    state.patients[index].age = age;
+    state.patients[index].gender = gender;
+    state.patients[index].diagnosis = diagnosis;
+    state.patients[index].memo = memo;
+  } else {
+    // 新規登録。ID重複チェック
+    if (state.patients.some(p => p.id === id)) {
+      alert("すでに同じIDで登録されています。別の識別子を使用してください。");
+      return;
+    }
+    state.patients.push({
+      id, age, gender, diagnosis, memo, records: []
+    });
+  }
+
+  savePatients();
+  hidePatientModal();
+  renderPatientsList();
+  
+  if (index >= 0) {
+    showPatientDetail(index); // 編集した場合は詳細に戻る
+  }
+}
+
+// -------------------------------------------------------------
+// 患者詳細 ＆ グラフ表示
+// -------------------------------------------------------------
+
+function showPatientDetail(index) {
+  state.currentPatientIndex = index;
+  const p = state.patients[index];
+  
+  document.getElementById("detail-patient-id").textContent = p.id;
+  document.getElementById("detail-patient-meta").textContent = 
+    `性別: ${p.gender || "未登録"} | 年齢: ${p.age ? p.age + '歳' : '未登録'} | 疾患: ${p.diagnosis || "未登録"}\nメモ: ${p.memo || "なし"}`;
+
+  // グラフフィルター（評価項目）のドロップダウン初期化
+  initChartFilterDropdowns(p);
+  
+  // 履歴リストの描画
+  renderHistoryList(p);
+
+  switchView("view-patient-detail");
+}
+
+function initChartFilterDropdowns(patient) {
+  const select = document.getElementById("chart-eval-select");
+  if (!select) return;
+  select.innerHTML = "";
+
+  // 患者が過去に測定したことのある評価項目IDの一覧を収集
+  const measuredEvalIds = new Set();
+  patient.records.forEach(r => {
+    if (r.evaluations) {
+      Object.keys(r.evaluations).forEach(id => measuredEvalIds.add(id));
+    }
+  });
+
+  // 測定したことがある項目、なければプリセットすべてを表示
+  const listItems = measuredEvalIds.size > 0 ? Array.from(measuredEvalIds) : Object.keys(PRESET_EVALUATIONS);
+
+  listItems.forEach(id => {
+    const meta = PRESET_EVALUATIONS[id] || state.customEvaluations.find(c => c.id === id);
+    if (meta) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = meta.name;
+      select.appendChild(opt);
+    }
+  });
+
+  if (listItems.length > 0) {
+    updateChartSubitemDropdown(listItems[0]);
+    triggerChartUpdate();
+  } else {
+    // 測定履歴が一切ない場合
+    showNoChartDataMessage("progressionChart");
+  }
+}
+
+function updateChartSubitemDropdown(evalId) {
+  const subSelect = document.getElementById("chart-subitem-select");
+  if (!subSelect) return;
+  subSelect.innerHTML = "";
+
+  const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+  if (!meta) return;
+
+  // デフォルト項目「代表値 / 合計」を追加
+  const optTotal = document.createElement("option");
+  optTotal.value = "total";
+  
+  if (meta.inputType === "timer_numeric") {
+    optTotal.textContent = "測定時間 (秒)";
+  } else if (meta.inputType === "single_select") {
+    optTotal.textContent = "総合スコア";
+  } else if (meta.inputType === "rom") {
+    // ROMは合計点がないので、サブ項目を羅列する
+    optTotal.style.display = "none"; 
+  } else {
+    optTotal.textContent = "合計点 / 総合値";
+  }
+  subSelect.appendChild(optTotal);
+
+  // 下位項目の羅列
+  if (meta.subItems) {
+    Object.keys(meta.subItems).forEach(key => {
+      // 10m歩行で計算済みのものなど、すべてを可視化可能にする
+      const subItem = meta.subItems[key];
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = subItem.name;
+      subSelect.appendChild(opt);
+    });
+  }
+
+  // MAL用個別動作の羅列
+  if (meta.actions && meta.inputType === "mal_custom") {
+    meta.actions.forEach(act => {
+      const opt = document.createElement("option");
+      opt.value = act.id;
+      opt.textContent = act.name;
+      subSelect.appendChild(opt);
+    });
+  }
+
+  // ROMの場合は、最初の関節部位をデフォルトにする
+  if (meta.inputType === "rom") {
+    subSelect.value = Object.keys(meta.subItems)[0];
+  } else {
+    subSelect.value = "total";
+  }
+}
+
+function triggerChartUpdate() {
+  resetChartView("progressionChart");
+  const pIndex = state.currentPatientIndex;
+  if (pIndex < 0) return;
+  
+  const evalId = document.getElementById("chart-eval-select").value;
+  const subItemId = document.getElementById("chart-subitem-select").value;
+  
+  if (!evalId) {
+    showNoChartDataMessage("progressionChart");
+    return;
+  }
+
+  const patient = state.patients[pIndex];
+  updateChart("progressionChart", patient.records, evalId, subItemId);
+}
+
+function renderHistoryList(patient) {
+  const container = document.getElementById("history-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!patient.records || patient.records.length === 0) {
+    container.innerHTML = '<div class="no-data">測定履歴がありません。「＋ 新規評価」から記録を開始してください。</div>';
+    return;
+  }
+
+  // 日付の降順（新しい順）にソートして表示
+  const sortedRecords = [...patient.records].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  sortedRecords.forEach(record => {
+    // 含まれる評価項目の名前一覧
+    const evalNames = Object.keys(record.evaluations).map(id => {
+      const meta = PRESET_EVALUATIONS[id] || state.customEvaluations.find(c => c.id === id);
+      return meta ? meta.name.split("（")[0].split("(")[0] : id;
+    }).join(", ");
+
+    const origRecordIndex = patient.records.indexOf(record);
+
+    const item = document.createElement("div");
+    item.className = "history-item";
+    item.innerHTML = `
+      <div>
+        <div class="history-date">${record.date}</div>
+        <div class="history-scales">${escapeHtml(evalNames)}</div>
+      </div>
+      <div>
+        <span class="card-badge" style="background: rgba(16, 185, 129, 0.08); color: var(--accent-green);">詳細 ＞</span>
+      </div>
+    `;
+    item.addEventListener("click", () => showHistoryDetail(origRecordIndex));
+    container.appendChild(item);
+  });
+}
+
+function showHistoryDetail(recordIndex) {
+  state.currentRecordIndex = recordIndex;
+  const patient = state.patients[state.currentPatientIndex];
+  const record = patient.records[recordIndex];
+
+  const metaContainer = document.getElementById("history-detail-meta");
+  metaContainer.innerHTML = `
+    <div><strong>評価日:</strong> ${record.date}</div>
+    <div><strong>評価者:</strong> ${escapeHtml(record.evaluator || "未登録")}</div>
+  `;
+
+  const contentContainer = document.getElementById("history-detail-content");
+  contentContainer.innerHTML = "";
+
+  Object.keys(record.evaluations).forEach(evalId => {
+    const evalData = record.evaluations[evalId];
+    const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+    const evalName = meta ? meta.name : evalId;
+
+    const section = document.createElement("div");
+    section.style.marginBottom = "16px";
+    section.style.paddingBottom = "12px";
+    section.style.borderBottom = "1px solid var(--border-color)";
+
+    let scoreHTML = "";
+    
+    if (meta && meta.inputType === "multi_scale") {
+      // 合計点表示
+      scoreHTML = `<div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 6px;">${evalName}: ${evalData.total}点</div>`;
+      // 各項目の詳細
+      const itemsListHTML = Object.keys(evalData)
+        .filter(k => k !== "total" && k !== "arm_total" && k !== "leg_total" && k !== "motor_total" && k !== "sensory_total" && k !== "static_bal" && k !== "dynamic_bal" && k !== "coordination")
+        .map(k => {
+          const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
+          return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; margin-bottom: 2px;">・${itemMeta}: ${evalData[k]}点</div>`;
+        }).join("");
+      
+      // 中分類合計値があれば追記 (FMAやSIASなど)
+      let subTotalsHTML = "";
+      if (evalData.arm_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(上肢: ${evalData.arm_total}点 / 下肢: ${evalData.leg_total}点)</div>`;
+      if (evalData.motor_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(運動: ${evalData.motor_total}点 / 感覚: ${evalData.sensory_total}点)</div>`;
+      if (evalData.static_bal !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(静的: ${evalData.static_bal}点 / 動的: ${evalData.dynamic_bal}点 / 協調性: ${evalData.coordination}点)</div>`;
+      if (evalData.grasp_sub !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(Grasp: ${evalData.grasp_sub}点 / Grip: ${evalData.grip_sub}点 / Pinch: ${evalData.pinch_sub}点 / Gross: ${evalData.gross_sub}点)</div>`;
+      
+      scoreHTML += itemsListHTML + subTotalsHTML;
+
+    } else if (meta && meta.inputType === "rom") {
+      scoreHTML = `<div style="font-weight: 700; color: var(--accent-purple); margin-bottom: 6px;">${evalName}</div>`;
+      const romLines = Object.keys(evalData).map(k => {
+        const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
+        const leftVal = evalData[k].left !== undefined ? `${evalData[k].left}°` : "--";
+        const rightVal = evalData[k].right !== undefined ? `${evalData[k].right}°` : "--";
+        return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 320px;">
+          <span>・${itemMeta}</span>
+          <span style="font-family: var(--font-title);">左: <span style="color:var(--accent-blue);">${leftVal}</span> / 右: <span style="color:var(--accent-purple);">${rightVal}</span></span>
+        </div>`;
+      }).join("");
+      scoreHTML += romLines;
+
+    } else if (meta && meta.inputType === "bilateral_numeric") {
+      const leftVal = evalData.left !== undefined ? `${evalData.left} ${meta.unit || ''}` : "--";
+      const rightVal = evalData.right !== undefined ? `${evalData.right} ${meta.unit || ''}` : "--";
+      scoreHTML = `<div style="font-weight: 700; color: var(--text-primary);">${evalName}: 
+        <span style="font-family: var(--font-title); font-size:14px; margin-left: 12px;">左: <span style="color:var(--accent-blue);">${leftVal}</span> / 右: <span style="color:var(--accent-purple);">${rightVal}</span></span>
+      </div>`;
+
+    } else if (evalId === "walk_10m") {
+      scoreHTML = `
+        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${evalName}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・時間: ${evalData.time} 秒</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・歩数: ${evalData.steps} 歩</div>
+        <div style="font-size: 13px; color: var(--accent-green); font-weight: 600; margin-left: 12px; margin-top: 4px;">計算結果: 歩行速度 ${evalData.speed} m/min | 歩幅 ${evalData.stride} cm</div>
+      `;
+    } else if (evalId === "brs") {
+      scoreHTML = `
+        <div style="font-weight: 700; color: var(--accent-purple); margin-bottom: 4px;">${evalName}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・上肢: Stage ${evalData.arm}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・手指: Stage ${evalData.hand}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・下肢: Stage ${evalData.leg}</div>
+      `;
+    } else if (evalId === "mas") {
+      scoreHTML = `
+        <div style="font-weight: 700; color: var(--accent-danger); margin-bottom: 4px;">${evalName}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・対象筋: ${escapeHtml(evalData.target_muscle)}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・スコア: MAS ${evalData.score}</div>
+      `;
+    } else if (evalId === "walk_6min") {
+      scoreHTML = `
+        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${evalName}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・歩行距離: ${evalData.distance} m</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・Borg主観的運動強度: ${evalData.borg_before || '--'} (前) → ${evalData.borg_after || '--'} (後)</div>
+      `;
+    } else if (evalId === "stef") {
+      scoreHTML = `<div style="font-weight: 700; color: var(--accent-purple); margin-bottom: 6px;">${evalName} - 左: ${evalData.left_total}点 / 右: ${evalData.right_total}点</div>`;
+      const stefLines = Object.keys(evalData)
+        .filter(k => k !== "left_total" && k !== "right_total")
+        .map(k => {
+          const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
+          const leftTime = evalData[k].time_left !== null ? `${evalData[k].time_left}秒` : "--";
+          const leftScore = evalData[k].score_left !== null ? `${evalData[k].score_left}点` : "--";
+          const rightTime = evalData[k].time_right !== null ? `${evalData[k].time_right}秒` : "--";
+          const rightScore = evalData[k].score_right !== null ? `${evalData[k].score_right}点` : "--";
+          return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 480px; margin-bottom: 1px;">
+            <span>・${itemMeta}</span>
+            <span style="font-family: var(--font-title); font-size:12px;">
+              左: <span style="color:var(--accent-blue);">${leftTime}(${leftScore})</span> / 
+              右: <span style="color:var(--accent-purple);">${rightTime}(${rightScore})</span>
+            </span>
+          </div>`;
+        }).join("");
+      scoreHTML += stefLines;
+    } else if (evalId === "mal") {
+      scoreHTML = `<div style="font-weight: 700; color: var(--accent-green); margin-bottom: 6px;">${evalName} - AOU平均: ${evalData.aou_mean} / QOM平均: ${evalData.qom_mean}</div>`;
+      const malLines = Object.keys(evalData)
+        .filter(k => k !== "aou_mean" && k !== "qom_mean")
+        .map(k => {
+          const actMeta = meta.actions.find(a => a.id === k);
+          const actName = actMeta ? actMeta.name : k;
+          const aouVal = evalData[k].aou !== null ? evalData[k].aou : "--";
+          const qomVal = evalData[k].qom !== null ? evalData[k].qom : "--";
+          return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 480px; margin-bottom: 2px;">
+            <span>・${actName}</span>
+            <span style="font-family: var(--font-title); font-size:12px;">AOU: <span style="color:var(--accent-blue);">${aouVal}</span> | QOM: <span style="color:var(--accent-green);">${qomVal}</span></span>
+          </div>`;
+        }).join("");
+      scoreHTML += malLines;
+    } else {
+      // 汎用（数値1つのテスト、カスタム項目など）
+      const val = evalData.score !== undefined ? evalData.score : (evalData.time || "");
+      const unit = meta ? meta.unit || "" : "";
+      scoreHTML = `<div style="font-weight: 700;">${evalName}: <span style="color: var(--accent-blue);">${val} ${unit}</span></div>`;
+      if (evalData.memo) {
+        scoreHTML += `<div style="font-size: 12px; color: var(--text-muted); margin-left: 12px; margin-top: 2px;">メモ: ${escapeHtml(evalData.memo)}</div>`;
+      }
+    }
+
+    section.innerHTML = scoreHTML;
+    contentContainer.appendChild(section);
+  });
+
+  showModal("history-detail-modal");
+}
+
+function deleteCurrentRecord() {
+  if (state.currentPatientIndex < 0 || state.currentRecordIndex < 0) return;
+  
+  if (confirm("この日の評価記録をすべて完全に削除してもよろしいですか？")) {
+    const patient = state.patients[state.currentPatientIndex];
+    patient.records.splice(state.currentRecordIndex, 1);
+    
+    savePatients();
+    hideModal("history-detail-modal");
+    
+    // 詳細ビューのリフレッシュ
+    showPatientDetail(state.currentPatientIndex);
+  }
+}
+
+// -------------------------------------------------------------
+// 新規評価入力フォームの生成・処理
+// -------------------------------------------------------------
+
+function showAssessmentSetup(patientIndex) {
+  switchView("view-assessment");
+  const p = state.patients[patientIndex];
+  
+  document.getElementById("assessment-patient-name").textContent = `ID: ${p.id}`;
+  document.getElementById("assessment-step-select").style.display = "block";
+  document.getElementById("assessment-step-form").style.display = "none";
+  
+  // 評価項目チェックリストの動的生成
+  const listContainer = document.getElementById("assessment-checklist");
+  listContainer.innerHTML = "";
+
+  // プリセット
+  Object.keys(PRESET_EVALUATIONS).forEach(id => {
+    const meta = PRESET_EVALUATIONS[id];
+    createChecklistItem(listContainer, id, meta.name, meta.category);
+  });
+
+  // カスタム項目
+  state.customEvaluations.forEach(custom => {
+    createChecklistItem(listContainer, custom.id, custom.name, "カスタム追加");
+  });
+}
+
+function createChecklistItem(container, id, name, category) {
+  const item = document.createElement("label");
+  item.className = "checklist-item";
+  
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = id;
+  
+  checkbox.addEventListener("change", () => {
+    if (checkbox.checked) {
+      item.classList.add("checked");
+    } else {
+      item.classList.remove("checked");
+    }
+  });
+
+  item.appendChild(checkbox);
+  
+  const labelText = document.createElement("span");
+  labelText.innerHTML = `${escapeHtml(name)} <small style="color:var(--text-muted); margin-left: 8px;">[${category}]</small>`;
+  item.appendChild(labelText);
+
+  container.appendChild(item);
+}
+
+function startScoring() {
+  const checkedBoxes = document.querySelectorAll("#assessment-checklist input[type='checkbox']:checked");
+  if (checkedBoxes.length === 0) {
+    alert("評価項目を少なくとも1つ選択してください。");
+    return;
+  }
+
+  // フォーム日付のデフォルトを今日にする
+  const dateInput = document.getElementById("assessment-date");
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  dateInput.value = `${yyyy}-${mm}-${dd}`;
+
+  // フォーム生成
+  const formContainer = document.getElementById("dynamic-assessment-inputs");
+  formContainer.innerHTML = "";
+
+  checkedBoxes.forEach(box => {
+    const evalId = box.value;
+    const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+    if (meta) {
+      const section = document.createElement("div");
+      section.className = "assessment-section";
+      section.setAttribute("data-eval-id", evalId);
+      
+      section.innerHTML = `
+        <div class="assessment-section-header">
+          <h3 style="font-size:16px; color:var(--text-primary);">${escapeHtml(meta.name)}</h3>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom:12px;">${escapeHtml(meta.description || '')}</p>
+      `;
+
+      // 採点ヘルプアコーディオン (説明/ガイドラインがある場合)
+      if (meta.guideline) {
+        const accordionHeader = document.createElement("div");
+        accordionHeader.className = "accordion-header";
+        accordionHeader.innerHTML = `<span>判定ガイド・基準を確認する</span><span class="chevron">▼</span>`;
+        
+        const accordionContent = document.createElement("div");
+        accordionContent.className = "accordion-content";
+        accordionContent.textContent = meta.guideline;
+
+        accordionHeader.addEventListener("click", () => {
+          accordionHeader.classList.toggle("active");
+        });
+
+        section.appendChild(accordionHeader);
+        section.appendChild(accordionContent);
+      }
+
+      // 各 inputType に応じた入力UIの追加
+      buildInputFormUI(section, evalId, meta);
+      formContainer.appendChild(section);
+    }
+  });
+
+  // UI切り替え
+  document.getElementById("assessment-step-select").style.display = "none";
+  document.getElementById("assessment-step-form").style.display = "block";
+}
+
+function buildInputFormUI(section, evalId, meta) {
+  const container = document.createElement("div");
+  container.className = "eval-input-ui-container";
+
+  // 1. 複数項目スケール（BBS, FMA, SIAS, SCP, TIS, TCT など）
+  if (meta.inputType === "multi_scale") {
+    let totalScoreElId = `total-${evalId}`;
+    
+    // 合計値インジケーター
+    const totalIndicator = document.createElement("div");
+    totalIndicator.className = "computed-output-box";
+    totalIndicator.style.marginBottom = "14px";
+    totalIndicator.innerHTML = `現在の合計点: <span class="computed-val" id="${totalScoreElId}">0</span> 点`;
+    container.appendChild(totalIndicator);
+
+    // 各設問項目
+    meta.items.forEach(item => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "scale-item";
+      itemEl.setAttribute("data-item-id", item.id);
+      
+      itemEl.innerHTML = `
+        <div class="scale-item-title">${escapeHtml(item.name)}</div>
+      `;
+
+      // 選択肢 (0〜4点などのボタンリスト)
+      const choicesContainer = document.createElement("div");
+      choicesContainer.className = "scoring-choices";
+
+      // 選択状態保存用 hidden input
+      const hiddenInput = document.createElement("input");
+      hiddenInput.type = "hidden";
+      hiddenInput.name = `${evalId}_${item.id}`;
+      hiddenInput.required = true;
+      choicesContainer.appendChild(hiddenInput);
+
+      Object.keys(item.criteria).forEach(score => {
+        const choice = document.createElement("div");
+        choice.className = "score-choice";
+        choice.innerHTML = `
+          <span class="score-num">${score}</span>
+          <span class="score-desc">${escapeHtml(item.criteria[score])}</span>
+        `;
+        choice.addEventListener("click", () => {
+          // すべての選択を解除
+          choicesContainer.querySelectorAll(".score-choice").forEach(c => c.classList.remove("selected"));
+          // 今回選択したものをハイライト
+          choice.classList.add("selected");
+          hiddenInput.value = score;
+          
+          // 合計点の再計算
+          recalculateMultiScaleTotal(evalId, meta);
+        });
+        choicesContainer.appendChild(choice);
+      });
+
+      itemEl.appendChild(choicesContainer);
+      container.appendChild(itemEl);
+    });
+  } 
+  // 2. 関節可動域 (ROM) 特殊入力
+  else if (meta.inputType === "rom") {
+    Object.keys(meta.subItems).forEach(key => {
+      const subItem = meta.subItems[key];
+      const itemEl = document.createElement("div");
+      itemEl.style.padding = "10px 0";
+      itemEl.style.borderBottom = "1px solid var(--border-color)";
+      
+      itemEl.innerHTML = `
+        <div style="font-size:13px; font-weight:600;">${escapeHtml(subItem.name)} (${subItem.unit})</div>
+        <div class="rom-side-container">
+          <div class="rom-side-box left">
+            <div class="rom-side-title">左 (麻痺/患側など)</div>
+            <div class="rom-angle-input">
+              <input type="number" name="${evalId}_${key}_left" class="form-control" placeholder="${subItem.defaultLeft}" min="-20" max="360">
+            </div>
+          </div>
+          <div class="rom-side-box right">
+            <div class="rom-side-title">右 (健側など)</div>
+            <div class="rom-angle-input">
+              <input type="number" name="${evalId}_${key}_right" class="form-control" placeholder="${subItem.defaultRight}" min="-20" max="360">
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(itemEl);
+    });
+  }
+  // 3. 左右対称数値入力 (膝伸展筋力、握力など)
+  else if (meta.inputType === "bilateral_numeric") {
+    container.innerHTML = `
+      <div class="rom-side-container" style="margin-top:0;">
+        <div class="rom-side-box left">
+          <div class="rom-side-title">左</div>
+          <input type="number" step="0.1" name="${evalId}_left" class="form-control" placeholder="数値" required>
+        </div>
+        <div class="rom-side-box right">
+          <div class="rom-side-title">右</div>
+          <input type="number" step="0.1" name="${evalId}_right" class="form-control" placeholder="数値" required>
+        </div>
+      </div>
+    `;
+  }
+  // 4. 歩行比率計算 (10m歩行)
+  else if (meta.inputType === "walk_10m_calc") {
+    const speedId = `${evalId}_speed_computed`;
+    const strideId = `${evalId}_stride_computed`;
+
+    container.innerHTML = `
+      <div class="walk-10m-grid">
+        <div class="form-group">
+          <label>かかった時間 (秒)</label>
+          <input type="number" step="0.01" name="${evalId}_time" id="${evalId}_time" class="form-control" placeholder="秒" required>
+        </div>
+        <div class="form-group">
+          <label>歩数 (歩)</label>
+          <input type="number" step="1" name="${evalId}_steps" id="${evalId}_steps" class="form-control" placeholder="歩" required>
+        </div>
+      </div>
+      <!-- タイマー簡易UI -->
+      <div class="timer-container">
+        <div class="timer-display" id="10m-timer-display">00.00</div>
+        <div class="timer-controls">
+          <button type="button" class="btn btn-secondary timer-btn" id="10m-timer-start">スタート</button>
+          <button type="button" class="btn btn-secondary timer-btn" id="10m-timer-reset">リセット</button>
+        </div>
+      </div>
+      <div class="computed-output-box">
+        <div>歩行速度 (自動計算): <span class="computed-val" id="${speedId}">--</span> m/min</div>
+        <div>平均歩幅 (自動計算): <span class="computed-val" id="${strideId}">--</span> cm</div>
+      </div>
+    `;
+
+    // 計算のリアルタイム連動
+    setTimeout(() => {
+      const timeInput = document.getElementById(`${evalId}_time`);
+      const stepsInput = document.getElementById(`${evalId}_steps`);
+      
+      const calc = () => {
+        const sec = parseFloat(timeInput.value);
+        const steps = parseInt(stepsInput.value);
+        if (sec > 0) {
+          const speed = (600 / sec).toFixed(1); // 10mの速度 m/min
+          document.getElementById(speedId).textContent = speed;
+          if (steps > 0) {
+            const stride = (1000 / steps).toFixed(1); // 10mの歩幅 cm
+            document.getElementById(strideId).textContent = stride;
+          }
+        }
+      };
+      
+      timeInput.addEventListener("input", calc);
+      stepsInput.addEventListener("input", calc);
+
+      // タイマーコントロール
+      setupTimerControls("10m-timer-display", "10m-timer-start", "10m-timer-reset", (timeSec) => {
+        timeInput.value = timeSec.toFixed(2);
+        calc();
+      });
+    }, 100);
+  }
+  // 5. タイマー機能付き数値 (TUG)
+  else if (meta.inputType === "timer_numeric") {
+    container.innerHTML = `
+      <div class="form-group">
+        <label>測定値 (秒)</label>
+        <input type="number" step="0.01" name="${evalId}_time" id="${evalId}_time" class="form-control" placeholder="秒" required>
+      </div>
+      <div class="timer-container">
+        <div class="timer-display" id="tug-timer-display">00.00</div>
+        <div class="timer-controls">
+          <button type="button" class="btn btn-secondary timer-btn" id="tug-timer-start">スタート</button>
+          <button type="button" class="btn btn-secondary timer-btn" id="tug-timer-reset">リセット</button>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const timeInput = document.getElementById(`${evalId}_time`);
+      setupTimerControls("tug-timer-display", "tug-timer-start", "tug-timer-reset", (timeSec) => {
+        timeInput.value = timeSec.toFixed(2);
+      });
+    }, 100);
+  }
+  // 6. 6分間歩行
+  else if (meta.inputType === "walk_6min_custom") {
+    let borgBeforeOpts = meta.borgOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+    let borgAfterOpts = meta.borgOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+
+    container.innerHTML = `
+      <div class="form-group">
+        <label>歩行距離 (メートル)</label>
+        <input type="number" name="${evalId}_distance" class="form-control" placeholder="m" required>
+      </div>
+      <div class="walk-10m-grid">
+        <div class="form-group">
+          <label>開始前 Borg指数</label>
+          <select name="${evalId}_borg_before">
+            ${borgBeforeOpts}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>終了後 Borg指数</label>
+          <select name="${evalId}_borg_after">
+            ${borgAfterOpts}
+          </select>
+        </div>
+      </div>
+    `;
+  }
+  // 7. 単一選択 (FAC)
+  else if (meta.inputType === "single_select") {
+    container.className = "scoring-choices";
+    
+    // 状態保存用 hidden
+    const hiddenInput = document.createElement("input");
+    hiddenInput.type = "hidden";
+    hiddenInput.name = `${evalId}_score`;
+    hiddenInput.required = true;
+    container.appendChild(hiddenInput);
+
+    meta.options.forEach(opt => {
+      const choice = document.createElement("div");
+      choice.className = "score-choice";
+      choice.innerHTML = `
+        <span class="score-num">${opt.value}</span>
+        <span class="score-desc" style="font-weight:600; color:var(--text-primary);">${escapeHtml(opt.label)}<br>
+          <small style="font-weight:400; color:var(--text-secondary);">${escapeHtml(opt.desc)}</small>
+        </span>
+      `;
+      choice.addEventListener("click", () => {
+        container.querySelectorAll(".score-choice").forEach(c => c.classList.remove("selected"));
+        choice.classList.add("selected");
+        hiddenInput.value = opt.value;
+      });
+      container.appendChild(choice);
+    });
+  }
+  // 8. BRS 独自UI
+  else if (meta.inputType === "brs_custom") {
+    container.innerHTML = "";
+    
+    const parts = ["arm", "hand", "leg"];
+    const labels = { arm: "上肢", hand: "手指", leg: "下肢" };
+
+    parts.forEach(part => {
+      const partBox = document.createElement("div");
+      partBox.style.marginBottom = "14px";
+      partBox.style.paddingBottom = "10px";
+      partBox.style.borderBottom = "1px solid var(--border-color)";
+
+      partBox.innerHTML = `
+        <div style="font-size:13px; font-weight:600; margin-bottom:6px;">${labels[part]}回復段階</div>
+        <select name="${evalId}_${part}" id="brs_${part}_select" required>
+          <option value="">段階を選択してください</option>
+          ${meta.stages.map(st => `<option value="${st}">Stage ${st}</option>`).join("")}
+        </select>
+        <div class="computed-output-box" id="brs_${part}_desc" style="font-size: 11px; display:none; white-space:pre-line;">
+        </div>
+      `;
+
+      setTimeout(() => {
+        const select = document.getElementById(`brs_${part}_select`);
+        const descBox = document.getElementById(`brs_${part}_desc`);
+        select.addEventListener("change", (e) => {
+          const val = e.target.value;
+          if (val) {
+            descBox.textContent = meta.criteria[part][val];
+            descBox.style.display = "block";
+          } else {
+            descBox.style.display = "none";
+          }
+        });
+      }, 100);
+
+      container.appendChild(partBox);
+    });
+  }
+  // 9. MAS 独自UI
+  else if (meta.inputType === "mas_custom") {
+    let masOpts = meta.options.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+    
+    container.innerHTML = `
+      <div class="form-group">
+        <label>評価対象筋 (例: 右肘屈筋、左膝伸展筋など)</label>
+        <input type="text" name="${evalId}_target_muscle" class="form-control" placeholder="対象筋肉名を入力" required>
+      </div>
+      <div class="form-group">
+        <label>MAS スコア</label>
+        <select name="${evalId}_score" id="mas_score_select" required>
+          <option value="">緊張の段階を選択</option>
+          ${masOpts}
+        </select>
+      </div>
+      <div class="computed-output-box" id="mas_desc_box" style="font-size:11px; display:none;"></div>
+    `;
+
+    setTimeout(() => {
+      const select = document.getElementById("mas_score_select");
+      const descBox = document.getElementById("mas_desc_box");
+      select.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (val) {
+          const opt = meta.options.find(o => o.value === val);
+          descBox.textContent = opt ? opt.desc : "";
+          descBox.style.display = "block";
+        } else {
+          descBox.style.display = "none";
+        }
+      });
+    }, 100);
+  }
+  // 9-2. STEF 独自UI
+  else if (meta.inputType === "stef_custom") {
+    // 左右の合計点インジケーター
+    const totalIndicator = document.createElement("div");
+    totalIndicator.className = "computed-output-box";
+    totalIndicator.style.marginBottom = "14px";
+    totalIndicator.innerHTML = `
+      現在の合計点 - 
+      左: <span class="computed-val" id="stef-left-total">0</span> 点 / 
+      右: <span class="computed-val" id="stef-right-total">0</span> 点
+    `;
+    container.appendChild(totalIndicator);
+
+    // 点数選択用のオプションHTML (1〜10点)
+    let scoreOptions = `<option value="">点数</option>`;
+    for (let i = 1; i <= 10; i++) {
+      scoreOptions += `<option value="${i}">${i}点</option>`;
+    }
+
+    meta.items.forEach(item => {
+      const itemEl = document.createElement("div");
+      itemEl.style.padding = "12px 0";
+      itemEl.style.borderBottom = "1px solid var(--border-color)";
+      
+      itemEl.innerHTML = `
+        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">${escapeHtml(item.name)}</div>
+        <div class="rom-side-container">
+          <div class="rom-side-box left">
+            <div class="rom-side-title">左</div>
+            <div style="display:flex; gap:6px;">
+              <input type="number" step="0.1" name="${evalId}_${item.id}_time_left" class="form-control" style="padding:8px;" placeholder="秒">
+              <select name="${evalId}_${item.id}_score_left" class="stef-score-select-left" style="padding:8px;">
+                ${scoreOptions}
+              </select>
+            </div>
+          </div>
+          <div class="rom-side-box right">
+            <div class="rom-side-title">右</div>
+            <div style="display:flex; gap:6px;">
+              <input type="number" step="0.1" name="${evalId}_${item.id}_time_right" class="form-control" style="padding:8px;" placeholder="秒">
+              <select name="${evalId}_${item.id}_score_right" class="stef-score-select-right" style="padding:8px;">
+                ${scoreOptions}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(itemEl);
+    });
+
+    // リアルタイム合計計算イベント
+    setTimeout(() => {
+      const recalcStef = () => {
+        let leftSum = 0;
+        let rightSum = 0;
+        document.querySelectorAll(".stef-score-select-left").forEach(sel => {
+          if (sel.value) leftSum += parseInt(sel.value);
+        });
+        document.querySelectorAll(".stef-score-select-right").forEach(sel => {
+          if (sel.value) rightSum += parseInt(sel.value);
+        });
+        document.getElementById("stef-left-total").textContent = leftSum;
+        document.getElementById("stef-right-total").textContent = rightSum;
+      };
+
+      container.querySelectorAll("select").forEach(sel => {
+        sel.addEventListener("change", recalcStef);
+      });
+    }, 100);
+  }
+  // 9-3. MAL 独自UI
+  else if (meta.inputType === "mal_custom") {
+    // 平均値インジケーター
+    const meanIndicator = document.createElement("div");
+    meanIndicator.className = "computed-output-box";
+    meanIndicator.style.marginBottom = "14px";
+    meanIndicator.innerHTML = `
+      現在の平均値 - 
+      AOU (頻度): <span class="computed-val" id="mal-aou-mean">--</span> / 
+      QOM (質): <span class="computed-val" id="mal-qom-mean">--</span>
+    `;
+    container.appendChild(meanIndicator);
+
+    // 0〜5点のセレクトオプション
+    let aouOpts = `<option value="">AOU (頻度)</option>`;
+    Object.keys(meta.scales.aou).forEach(k => {
+      aouOpts += `<option value="${k}">${meta.scales.aou[k]}</option>`;
+    });
+
+    let qomOpts = `<option value="">QOM (質)</option>`;
+    Object.keys(meta.scales.qom).forEach(k => {
+      qomOpts += `<option value="${k}">${meta.scales.qom[k]}</option>`;
+    });
+
+    meta.actions.forEach(action => {
+      const itemEl = document.createElement("div");
+      itemEl.style.padding = "14px 0";
+      itemEl.style.borderBottom = "1px solid var(--border-color)";
+      
+      itemEl.innerHTML = `
+        <div style="font-size:13px; font-weight:600; margin-bottom:6px;">${escapeHtml(action.name)}</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <select name="${evalId}_${action.id}_aou" class="mal-aou-select">
+              ${aouOpts}
+            </select>
+          </div>
+          <div>
+            <select name="${evalId}_${action.id}_qom" class="mal-qom-select">
+              ${qomOpts}
+            </select>
+          </div>
+        </div>
+      `;
+      container.appendChild(itemEl);
+    });
+
+    // リアルタイム平均計算イベント
+    setTimeout(() => {
+      const recalcMal = () => {
+        let aouSum = 0;
+        let aouCount = 0;
+        let qomSum = 0;
+        let qomCount = 0;
+
+        document.querySelectorAll(".mal-aou-select").forEach(sel => {
+          if (sel.value !== "") {
+            aouSum += parseFloat(sel.value);
+            aouCount++;
+          }
+        });
+
+        document.querySelectorAll(".mal-qom-select").forEach(sel => {
+          if (sel.value !== "") {
+            qomSum += parseFloat(sel.value);
+            qomCount++;
+          }
+        });
+
+        document.getElementById("mal-aou-mean").textContent = aouCount > 0 ? (aouSum / aouCount).toFixed(2) : "--";
+        document.getElementById("mal-qom-mean").textContent = qomCount > 0 ? (qomSum / qomCount).toFixed(2) : "--";
+      };
+
+      container.querySelectorAll("select").forEach(sel => {
+        sel.addEventListener("change", recalcMal);
+      });
+    }, 100);
+  }
+  // 10. カスタム項目または汎用数値型
+  else {
+    const unit = meta.unit || "";
+    container.innerHTML = `
+      <div class="form-group">
+        <label>測定値 (${unit})</label>
+        <input type="number" step="0.1" name="${evalId}_score" class="form-control" placeholder="数値を入力" required>
+      </div>
+      <div class="form-group">
+        <label>メモ / 備考</label>
+        <input type="text" name="${evalId}_memo" class="form-control" placeholder="測定時の特記情報など">
+      </div>
+    `;
+  }
+
+  section.appendChild(container);
+}
+
+// 複数項目スケールの合計点リアルタイム再計算
+function recalculateMultiScaleTotal(evalId, meta) {
+  let sum = 0;
+  let allSelected = true;
+
+  meta.items.forEach(item => {
+    const input = document.querySelector(`input[name="${evalId}_${item.id}"]`);
+    if (input && input.value !== "") {
+      sum += parseInt(input.value);
+    } else {
+      allSelected = false;
+    }
+  });
+
+  const totalEl = document.getElementById(`total-${evalId}`);
+  if (totalEl) {
+    totalEl.textContent = sum;
+  }
+}
+
+// ストップウォッチ（タイマー）ユーティリティ
+function setupTimerControls(displayId, startBtnId, resetBtnId, onTickCallback) {
+  const display = document.getElementById(displayId);
+  const startBtn = document.getElementById(startBtnId);
+  const resetBtn = document.getElementById(resetBtnId);
+
+  let isRunning = false;
+
+  const updateDisplay = () => {
+    const totalMs = isRunning ? (Date.now() - timerStart + timerElapsed) : timerElapsed;
+    const sec = totalMs / 1000;
+    display.textContent = sec.toFixed(2);
+    if (onTickCallback) {
+      onTickCallback(sec);
+    }
+  };
+
+  startBtn.addEventListener("click", () => {
+    if (isRunning) {
+      // ストップ
+      isRunning = false;
+      clearInterval(timerInterval);
+      timerElapsed += Date.now() - timerStart;
+      startBtn.textContent = "再開";
+      startBtn.classList.remove("btn-danger");
+      startBtn.classList.add("btn-green");
+    } else {
+      // スタート
+      isRunning = true;
+      timerStart = Date.now();
+      timerInterval = setInterval(updateDisplay, 37); // 約27FPSで更新
+      startBtn.textContent = "ストップ";
+      startBtn.classList.remove("btn-green");
+      startBtn.classList.add("btn-danger");
+    }
+  });
+
+  resetBtn.addEventListener("click", () => {
+    isRunning = false;
+    clearInterval(timerInterval);
+    timerElapsed = 0;
+    timerStart = 0;
+    startBtn.textContent = "スタート";
+    startBtn.classList.remove("btn-danger");
+    startBtn.classList.remove("btn-green");
+    display.textContent = "00.00";
+    if (onTickCallback) {
+      onTickCallback(0);
+    }
+  });
+}
+
+// 評価データの送信・収集・保存
+function handleAssessmentSubmit(e) {
+  e.preventDefault();
+  
+  const pIndex = state.currentPatientIndex;
+  if (pIndex < 0) return;
+
+  const date = document.getElementById("assessment-date").value;
+  const evaluator = document.getElementById("assessment-evaluator").value.trim();
+
+  if (!date) {
+    alert("日付を入力してください。");
+    return;
+  }
+
+  // アクティブな評価フォームのデータ収集
+  const evaluations = {};
+  const activeSections = document.querySelectorAll("#dynamic-assessment-inputs .assessment-section");
+
+  activeSections.forEach(section => {
+    const evalId = section.getAttribute("data-eval-id");
+    const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+    
+    if (meta) {
+      const data = {};
+
+      if (meta.inputType === "multi_scale") {
+        let total = 0;
+        meta.items.forEach(item => {
+          const val = parseInt(document.querySelector(`input[name="${evalId}_${item.id}"]`).value);
+          data[item.id] = val;
+          total += val;
+        });
+        data.total = total;
+
+        // 特殊合計 (FMA / SIAS / TIS / ARAT)
+        if (evalId === "fma") {
+          data.arm_total = data.ue_reflex + data.ue_flex_syn + data.ue_ext_syn + data.ue_mix + data.ue_sepa + data.ue_normal_ref + data.ue_wrist + data.ue_hand + data.ue_coord;
+          data.leg_total = data.le_reflex + data.le_flex_syn + data.le_ext_syn + data.le_mix + data.le_sepa + data.le_normal_ref + data.le_coord;
+        } else if (evalId === "sias") {
+          data.motor_total = data.m_hip + data.m_knee + data.m_foot + data.m_proximal + data.m_distal;
+          data.sensory_total = data.s_touch + data.s_position;
+        } else if (evalId === "tis") {
+          // 下位項目の合計
+          data.static_bal = data.static_bal || 0;
+          data.dynamic_bal = data.dynamic_bal || 0;
+          data.coordination = data.coordination || 0;
+        } else if (evalId === "arat") {
+          data.grasp_sub = (data.g1 || 0) + (data.g2 || 0) + (data.g3 || 0) + (data.g4 || 0) + (data.g5 || 0) + (data.g6 || 0);
+          data.grip_sub = (data.gr1 || 0) + (data.gr2 || 0) + (data.gr3 || 0) + (data.gr4 || 0);
+          data.pinch_sub = (data.p1 || 0) + (data.p2 || 0) + (data.p3 || 0) + (data.p4 || 0) + (data.p5 || 0) + (data.p6 || 0);
+          data.gross_sub = (data.gm1 || 0) + (data.gm2 || 0) + (data.gm3 || 0);
+        }
+      } 
+      else if (meta.inputType === "rom") {
+        Object.keys(meta.subItems).forEach(key => {
+          const lVal = document.querySelector(`input[name="${evalId}_${key}_left"]`).value;
+          const rVal = document.querySelector(`input[name="${evalId}_${key}_right"]`).value;
+          
+          data[key] = {
+            left: lVal !== "" ? parseInt(lVal) : null,
+            right: rVal !== "" ? parseInt(rVal) : null
+          };
+        });
+      }
+      else if (meta.inputType === "bilateral_numeric") {
+        const lVal = document.querySelector(`input[name="${evalId}_left"]`).value;
+        const rVal = document.querySelector(`input[name="${evalId}_right"]`).value;
+        data.left = lVal !== "" ? parseFloat(lVal) : null;
+        data.right = rVal !== "" ? parseFloat(rVal) : null;
+      }
+      else if (meta.inputType === "walk_10m_calc") {
+        const sec = parseFloat(document.getElementById(`${evalId}_time`).value);
+        const steps = parseInt(document.getElementById(`${evalId}_steps`).value);
+        data.time = sec;
+        data.steps = steps;
+        // 速度と歩幅を再計算
+        data.speed = sec > 0 ? parseFloat((600 / sec).toFixed(1)) : 0;
+        data.stride = steps > 0 ? parseFloat((1000 / steps).toFixed(1)) : 0;
+      }
+      else if (meta.inputType === "timer_numeric") {
+        data.time = parseFloat(document.getElementById(`${evalId}_time`).value);
+      }
+      else if (meta.inputType === "walk_6min_custom") {
+        data.distance = parseInt(document.querySelector(`input[name="${evalId}_distance"]`).value);
+        data.borg_before = parseInt(document.querySelector(`select[name="${evalId}_borg_before"]`).value);
+        data.borg_after = parseInt(document.querySelector(`select[name="${evalId}_borg_after"]`).value);
+      }
+      else if (meta.inputType === "single_select") {
+        data.score = parseInt(document.querySelector(`input[name="${evalId}_score"]`).value);
+      }
+      else if (meta.inputType === "brs_custom") {
+        data.arm = document.querySelector(`select[name="${evalId}_arm"]`).value;
+        data.hand = document.querySelector(`select[name="${evalId}_hand"]`).value;
+        data.leg = document.querySelector(`select[name="${evalId}_leg"]`).value;
+      }
+      else if (meta.inputType === "mas_custom") {
+        data.target_muscle = document.querySelector(`input[name="${evalId}_target_muscle"]`).value.trim();
+        data.score = document.querySelector(`select[name="${evalId}_score"]`).value;
+      }
+      else if (meta.inputType === "stef_custom") {
+        let leftTotal = 0;
+        let rightTotal = 0;
+        meta.items.forEach(item => {
+          const tL = document.querySelector(`input[name="${evalId}_${item.id}_time_left"]`).value;
+          const sL = document.querySelector(`select[name="${evalId}_${item.id}_score_left"]`).value;
+          const tR = document.querySelector(`input[name="${evalId}_${item.id}_time_right"]`).value;
+          const sR = document.querySelector(`select[name="${evalId}_${item.id}_score_right"]`).value;
+
+          const scoreL = sL !== "" ? parseInt(sL) : null;
+          const scoreR = sR !== "" ? parseInt(sR) : null;
+
+          data[item.id] = {
+            time_left: tL !== "" ? parseFloat(tL) : null,
+            score_left: scoreL,
+            time_right: tR !== "" ? parseFloat(tR) : null,
+            score_right: scoreR
+          };
+
+          if (scoreL !== null) leftTotal += scoreL;
+          if (scoreR !== null) rightTotal += scoreR;
+        });
+        data.left_total = leftTotal;
+        data.right_total = rightTotal;
+      }
+      else if (meta.inputType === "mal_custom") {
+        let aouSum = 0;
+        let aouCount = 0;
+        let qomSum = 0;
+        let qomCount = 0;
+
+        meta.actions.forEach(act => {
+          const aouVal = document.querySelector(`select[name="${evalId}_${act.id}_aou"]`).value;
+          const qomVal = document.querySelector(`select[name="${evalId}_${act.id}_qom"]`).value;
+
+          const aou = aouVal !== "" ? parseInt(aouVal) : null;
+          const qom = qomVal !== "" ? parseInt(qomVal) : null;
+
+          data[act.id] = { aou, qom };
+
+          if (aou !== null) {
+            aouSum += aou;
+            aouCount++;
+          }
+          if (qom !== null) {
+            qomSum += qom;
+            qomCount++;
+          }
+        });
+
+        data.aou_mean = aouCount > 0 ? parseFloat((aouSum / aouCount).toFixed(2)) : 0;
+        data.qom_mean = qomCount > 0 ? parseFloat((qomSum / qomCount).toFixed(2)) : 0;
+      }
+      else {
+        // カスタムまたは数値1つ
+        data.score = parseFloat(document.querySelector(`input[name="${evalId}_score"]`).value);
+        data.memo = document.querySelector(`input[name="${evalId}_memo"]`).value.trim();
+      }
+
+      evaluations[evalId] = data;
+    }
+  });
+
+  // レコードの登録
+  const record = {
+    date,
+    evaluator,
+    evaluations
+  };
+
+  // 既存の同じ日付のレコードがあればマージするか上書きするか確認
+  const existingRecordIndex = state.patients[pIndex].records.findIndex(r => r.date === date);
+  if (existingRecordIndex >= 0) {
+    if (confirm(`${date} の測定記録はすでに存在します。上書きしますか？`)) {
+      state.patients[pIndex].records[existingRecordIndex] = record;
+    } else {
+      return; // キャンセル
+    }
+  } else {
+    state.patients[pIndex].records.push(record);
+  }
+
+  savePatients();
+  
+  // 詳細画面に戻りリフレッシュ
+  showPatientDetail(pIndex);
+}
+
+// -------------------------------------------------------------
+// カスタマイズ・設定ロジック
+// -------------------------------------------------------------
+
+function handleCustomEvalSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById("custom-name").value.trim();
+  const unit = document.getElementById("custom-unit").value.trim();
+  const desc = document.getElementById("custom-description").value.trim();
+
+  if (!name) return;
+
+  const id = `custom_${Date.now()}`;
+  const newItem = {
+    id,
+    name,
+    unit,
+    category: "カスタム項目",
+    description: desc,
+    inputType: "generic_numeric", // カスタムは簡易数値入力とする
+    isCustom: true
+  };
+
+  state.customEvaluations.push(newItem);
+  saveCustomEvaluations();
+  
+  document.getElementById("custom-eval-form").reset();
+  renderCustomEvaluationsList();
+}
+
+function renderCustomEvaluationsList() {
+  const container = document.getElementById("custom-evals-list");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (state.customEvaluations.length === 0) {
+    container.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">追加されたカスタム評価はありません。</p>';
+    return;
+  }
+
+  state.customEvaluations.forEach(item => {
+    const el = document.createElement("div");
+    el.style.display = "flex";
+    el.style.justify = "space-between";
+    el.style.alignItems = "center";
+    el.style.padding = "8px 12px";
+    el.style.backgroundColor = "rgba(255,255,255,0.02)";
+    el.style.border = "1px solid var(--border-color)";
+    el.style.borderRadius = "8px";
+    el.style.marginBottom = "8px";
+
+    el.innerHTML = `
+      <div>
+        <div style="font-size: 13px; font-weight:600;">${escapeHtml(item.name)} (${escapeHtml(item.unit)})</div>
+        <div style="font-size: 11px; color:var(--text-secondary);">${escapeHtml(item.description || "説明なし")}</div>
+      </div>
+      <button class="btn btn-danger" style="width:auto; padding: 4px 8px; font-size:11px;" onclick="deleteCustomEval('${item.id}')">削除</button>
+    `;
+    container.appendChild(el);
+  });
+}
+
+// グローバルスコープにするために window に紐付け
+window.deleteCustomEval = function(id) {
+  if (confirm("このカスタム評価項目を削除しますか？ (既存の測定履歴データは保持されます)")) {
+    state.customEvaluations = state.customEvaluations.filter(c => c.id !== id);
+    saveCustomEvaluations();
+    renderCustomEvaluationsList();
+  }
+};
+
+// JSON データエクスポート
+function exportData() {
+  const dataStr = JSON.stringify({
+    patients: state.patients,
+    customEvaluations: state.customEvaluations,
+    exportDate: new Date().toISOString()
+  }, null, 2);
+
+  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+  const exportFileDefaultName = `rehareco_backup_${new Date().toISOString().split('T')[0]}.json`;
+
+  const linkElement = document.createElement('a');
+  linkElement.setAttribute('href', dataUri);
+  linkElement.setAttribute('download', exportFileDefaultName);
+  linkElement.click();
+}
+
+// JSON データインポート
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (data.patients && Array.isArray(data.patients)) {
+        if (confirm("データをインポートします。現在のデータは上書き・統合されますが、よろしいですか？")) {
+          // マージ処理
+          data.patients.forEach(impP => {
+            const matchIdx = state.patients.findIndex(p => p.id === impP.id);
+            if (matchIdx >= 0) {
+              // 既存患者の場合、レコードをマージ（同じ日付はインポート側優先）
+              impP.records.forEach(impR => {
+                const rMatchIdx = state.patients[matchIdx].records.findIndex(r => r.date === impR.date);
+                if (rMatchIdx >= 0) {
+                  state.patients[matchIdx].records[rMatchIdx] = impR;
+                } else {
+                  state.patients[matchIdx].records.push(impR);
+                }
+              });
+            } else {
+              // 新規患者
+              state.patients.push(impP);
+            }
+          });
+
+          // カスタム評価のマージ
+          if (data.customEvaluations && Array.isArray(data.customEvaluations)) {
+            data.customEvaluations.forEach(impC => {
+              if (!state.customEvaluations.some(c => c.id === impC.id)) {
+                state.customEvaluations.push(impC);
+              }
+            });
+          }
+
+          savePatients();
+          saveCustomEvaluations();
+          renderPatientsList();
+          renderCustomEvaluationsList();
+          alert("インポートが成功しました。");
+        }
+      } else {
+        alert("無効なバックアップファイルフォーマットです。");
+      }
+    } catch (err) {
+      alert("ファイルの解析に失敗しました。JSONファイルであることを確認してください。");
+    }
+  };
+  reader.readAsText(file);
+}
+
+// 全データ初期化
+function clearAllData() {
+  if (confirm("警告: すべての患者データ、測定履歴、カスタム設定が完全に消去されます。この操作は取り消せません。続行しますか？")) {
+    localStorage.removeItem("rehareco_patients");
+    localStorage.removeItem("rehareco_custom_evaluations");
+    state.patients = [];
+    state.customEvaluations = [];
+    renderPatientsList();
+    renderCustomEvaluationsList();
+    switchView("view-patients");
+    alert("データをすべて消去しました。");
+  }
+}
+
+// -------------------------------------------------------------
+// モーダル ＆ ユーティリティ
+// -------------------------------------------------------------
+
+function showModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.add("active");
+}
+
+function hideModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove("active");
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// 初回体験用のデモデータを生成
+function getDemoData() {
+  return [
+    {
+      id: "P001",
+      age: 78,
+      gender: "男性",
+      diagnosis: "脳梗塞（左片麻痺）",
+      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARATを測定。",
+      records: [
+        {
+          date: "2026-06-01",
+          evaluator: "A.B",
+          evaluations: {
+            bbs: {
+              total: 32,
+              q1: 3, q2: 2, q3: 4, q4: 2, q5: 3, q6: 2, q7: 2, q8: 2, q9: 2, q10: 2, q11: 2, q12: 2, q13: 2, q14: 2
+            },
+            rom: {
+              shoulder_flex: { left: 120, right: 180 },
+              shoulder_ext: { left: 35, right: 50 },
+              shoulder_abd: { left: 110, right: 180 },
+              elbow_flex: { left: 115, right: 145 },
+              elbow_ext: { left: -10, right: 0 },
+              wrist_flex: { left: 60, right: 90 },
+              wrist_ext: { left: 40, right: 70 },
+              hip_flex: { left: 95, right: 125 },
+              hip_ext: { left: 5, right: 15 },
+              knee_flex: { left: 95, right: 130 },
+              knee_ext: { left: -5, right: 0 },
+              ankle_flex: { left: 5, right: 20 },
+              ankle_ext: { left: 25, right: 45 }
+            },
+            walk_10m: {
+              time: 15.2,
+              steps: 26,
+              speed: 39.5,
+              stride: 38.5
+            },
+            tug: {
+              time: 18.5
+            },
+            stef: {
+              left_total: 52,
+              right_total: 100,
+              t1: { time_left: 5.5, score_left: 6, time_right: 1.5, score_right: 10 },
+              t2: { time_left: 6.2, score_left: 6, time_right: 1.6, score_right: 10 },
+              t3: { time_left: 7.1, score_left: 5, time_right: 1.8, score_right: 10 },
+              t4: { time_left: 7.8, score_left: 5, time_right: 2.0, score_right: 10 },
+              t5: { time_left: 12.0, score_left: 5, time_right: 3.2, score_right: 10 },
+              t6: { time_left: 8.5, score_left: 5, time_right: 2.1, score_right: 10 },
+              t7: { time_left: 11.2, score_left: 5, time_right: 2.5, score_right: 10 },
+              t8: { time_left: 10.8, score_left: 5, time_right: 2.3, score_right: 10 },
+              t9: { time_left: 13.5, score_left: 5, time_right: 3.5, score_right: 10 },
+              t10: { time_left: 16.0, score_left: 5, time_right: 4.2, score_right: 10 }
+            },
+            mal: {
+              aou_mean: 1.21,
+              qom_mean: 0.86,
+              a1: { aou: 1, qom: 1 }, a2: { aou: 2, qom: 1 }, a3: { aou: 1, qom: 1 }, a4: { aou: 1, qom: 1 },
+              a5: { aou: 2, qom: 1 }, a6: { aou: 1, qom: 1 }, a7: { aou: 1, qom: 1 }, a8: { aou: 1, qom: 1 },
+              a9: { aou: 1, qom: 1 }, a10: { aou: 1, qom: 1 }, a11: { aou: 1, qom: 0 }, a12: { aou: 2, qom: 1 },
+              a13: { aou: 1, qom: 1 }, a14: { aou: 1, qom: 0 }
+            },
+            arat: {
+              total: 25,
+              grasp_sub: 8, grip_sub: 5, pinch_sub: 6, gross_sub: 6,
+              g1: 2, g2: 1, g3: 1, g4: 1, g5: 2, g6: 1,
+              gr1: 2, gr2: 1, gr3: 1, gr4: 1,
+              p1: 1, p2: 1, p3: 1, p4: 1, p5: 1, p6: 1,
+              gm1: 2, gm2: 2, gm3: 2
+            }
+          }
+        },
+        {
+          date: "2026-06-15",
+          evaluator: "A.B",
+          evaluations: {
+            bbs: {
+              total: 40,
+              q1: 4, q2: 3, q3: 4, q4: 3, q5: 3, q6: 3, q7: 3, q8: 3, q9: 2, q10: 3, q11: 3, q12: 2, q13: 2, q14: 2
+            },
+            rom: {
+              shoulder_flex: { left: 140, right: 180 },
+              shoulder_ext: { left: 40, right: 50 },
+              shoulder_abd: { left: 135, right: 180 },
+              elbow_flex: { left: 130, right: 145 },
+              elbow_ext: { left: -5, right: 0 },
+              wrist_flex: { left: 75, right: 90 },
+              wrist_ext: { left: 55, right: 70 },
+              hip_flex: { left: 110, right: 125 },
+              hip_ext: { left: 10, right: 15 },
+              knee_flex: { left: 110, right: 130 },
+              knee_ext: { left: 0, right: 0 },
+              ankle_flex: { left: 12, right: 20 },
+              ankle_ext: { left: 35, right: 45 }
+            },
+            walk_10m: {
+              time: 12.0,
+              steps: 22,
+              speed: 50.0,
+              stride: 45.5
+            },
+            tug: {
+              time: 15.2
+            },
+            stef: {
+              left_total: 68,
+              right_total: 100,
+              t1: { time_left: 3.5, score_left: 8, time_right: 1.5, score_right: 10 },
+              t2: { time_left: 4.1, score_left: 8, time_right: 1.6, score_right: 10 },
+              t3: { time_left: 4.8, score_left: 7, time_right: 1.8, score_right: 10 },
+              t4: { time_left: 5.2, score_left: 7, time_right: 2.0, score_right: 10 },
+              t5: { time_left: 8.5, score_left: 6, time_right: 3.2, score_right: 10 },
+              t6: { time_left: 6.1, score_left: 7, time_right: 2.1, score_right: 10 },
+              t7: { time_left: 7.8, score_left: 6, time_right: 2.5, score_right: 10 },
+              t8: { time_left: 8.0, score_left: 6, time_right: 2.3, score_right: 10 },
+              t9: { time_left: 9.5, score_left: 6, time_right: 3.5, score_right: 10 },
+              t10: { time_left: 11.2, score_left: 7, time_right: 4.2, score_right: 10 }
+            },
+            mal: {
+              aou_mean: 2.21,
+              qom_mean: 1.79,
+              a1: { aou: 2, qom: 2 }, a2: { aou: 3, qom: 2 }, a3: { aou: 2, qom: 2 }, a4: { aou: 2, qom: 1 },
+              a5: { aou: 3, qom: 2 }, a6: { aou: 2, qom: 2 }, a7: { aou: 2, qom: 2 }, a8: { aou: 2, qom: 1 },
+              a9: { aou: 2, qom: 2 }, a10: { aou: 2, qom: 2 }, a11: { aou: 2, qom: 1 }, a12: { aou: 3, qom: 2 },
+              a13: { aou: 2, qom: 2 }, a14: { aou: 2, qom: 1 }
+            },
+            arat: {
+              total: 36,
+              grasp_sub: 12, grip_sub: 8, pinch_sub: 9, gross_sub: 7,
+              g1: 3, g2: 2, g3: 2, g4: 1, g5: 2, g6: 2,
+              gr1: 3, gr2: 2, gr3: 2, gr4: 1,
+              p1: 2, p2: 2, p3: 1, p4: 1, p5: 2, p6: 1,
+              gm1: 3, gm2: 2, gm3: 2
+            }
+          }
+        },
+        {
+          date: "2026-07-12",
+          evaluator: "A.B",
+          evaluations: {
+            bbs: {
+              total: 48,
+              q1: 4, q2: 4, q3: 4, q4: 4, q5: 4, q6: 4, q7: 4, q8: 3, q9: 3, q10: 3, q11: 3, q12: 3, q13: 3, q14: 2
+            },
+            rom: {
+              shoulder_flex: { left: 160, right: 180 },
+              shoulder_ext: { left: 45, right: 50 },
+              shoulder_abd: { left: 160, right: 180 },
+              elbow_flex: { left: 140, right: 145 },
+              elbow_ext: { left: 0, right: 0 },
+              wrist_flex: { left: 85, right: 90 },
+              wrist_ext: { left: 65, right: 70 },
+              hip_flex: { left: 120, right: 125 },
+              hip_ext: { left: 15, right: 15 },
+              knee_flex: { left: 120, right: 130 },
+              knee_ext: { left: 0, right: 0 },
+              ankle_flex: { left: 18, right: 20 },
+              ankle_ext: { left: 40, right: 45 }
+            },
+            walk_10m: {
+              time: 9.5,
+              steps: 18,
+              speed: 63.2,
+              stride: 55.6
+            },
+            tug: {
+              time: 11.8
+            },
+            stef: {
+              left_total: 84,
+              right_total: 100,
+              t1: { time_left: 2.1, score_left: 10, time_right: 1.5, score_right: 10 },
+              t2: { time_left: 2.5, score_left: 9, time_right: 1.6, score_right: 10 },
+              t3: { time_left: 3.2, score_left: 8, time_right: 1.8, score_right: 10 },
+              t4: { time_left: 3.8, score_left: 8, time_right: 2.0, score_right: 10 },
+              t5: { time_left: 6.5, score_left: 8, time_right: 3.2, score_right: 10 },
+              t6: { time_left: 4.2, score_left: 9, time_right: 2.1, score_right: 10 },
+              t7: { time_left: 5.5, score_left: 8, time_right: 2.5, score_right: 10 },
+              t8: { time_left: 5.8, score_left: 8, time_right: 2.3, score_right: 10 },
+              t9: { time_left: 7.2, score_left: 8, time_right: 3.5, score_right: 10 },
+              t10: { time_left: 9.0, score_left: 8, time_right: 4.2, score_right: 10 }
+            },
+            mal: {
+              aou_mean: 3.57,
+              qom_mean: 3.21,
+              a1: { aou: 4, qom: 3 }, a2: { aou: 4, qom: 4 }, a3: { aou: 3, qom: 3 }, a4: { aou: 3, qom: 3 },
+              a5: { aou: 4, qom: 3 }, a6: { aou: 3, qom: 3 }, a7: { aou: 3, qom: 3 }, a8: { aou: 3, qom: 3 },
+              a9: { aou: 4, qom: 3 }, a10: { aou: 4, qom: 3 }, a11: { aou: 3, qom: 3 }, a12: { aou: 4, qom: 4 },
+              a13: { aou: 4, qom: 4 }, a14: { aou: 4, qom: 3 }
+            },
+            arat: {
+              total: 48,
+              grasp_sub: 15, grip_sub: 10, pinch_sub: 14, gross_sub: 9,
+              g1: 3, g2: 3, g3: 2, g4: 2, g5: 3, g6: 2,
+              gr1: 3, gr2: 3, gr3: 2, gr4: 2,
+              p1: 3, p2: 2, p3: 2, p4: 2, p5: 3, p6: 2,
+              gm1: 3, gm2: 3, gm3: 3
+            }
+          }
+        }
+      ]
+    },
+    {
+      id: "P002",
+      age: 65,
+      gender: "女性",
+      diagnosis: "右大腿骨頚部骨折",
+      memo: "人工骨頭挿入術後。TUG、筋力、6分間歩行を測定。免荷終了し、現在全荷重歩行訓練中。",
+      records: [
+        {
+          date: "2026-06-20",
+          evaluator: "C.D",
+          evaluations: {
+            knee_extension: { left: 25.0, right: 12.0 },
+            grip_strength: { left: 20.0, right: 18.0 },
+            tug: { time: 22.4 },
+            walk_6min: { distance: 180, borg_before: 9, borg_after: 15 }
+          }
+        },
+        {
+          date: "2026-07-10",
+          evaluator: "C.D",
+          evaluations: {
+            knee_extension: { left: 26.5, right: 19.0 },
+            grip_strength: { left: 21.0, right: 19.5 },
+            tug: { time: 14.8 },
+            walk_6min: { distance: 265, borg_before: 8, borg_after: 12 }
+          }
+        }
+      ]
+    }
+  ];
+}

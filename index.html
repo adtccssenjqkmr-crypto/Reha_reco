@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>リハレコ - リハビリ評価記録管理</title>
+  <meta name="description" content="リハビリテーション評価の記録とグラフ見える化を行うスマホアプリ">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <!-- Theme Color for mobile browsers -->
+  <meta name="theme-color" content="#121824">
+  <!-- iOS web app capability -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="リハレコ">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="app.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="logo-container">
+      <img src="icon.svg" alt="リハレコ ロゴ" class="logo-icon">
+      <span class="logo-text">リハレコ</span>
+    </div>
+    <div id="header-action">
+      <!-- 状況に応じたボタンなどを動的に配置 -->
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- VIEW 1: 患者一覧 (デフォルト) -->
+    <section id="view-patients" class="app-view active">
+      <div class="patient-list-header">
+        <h2>対象者一覧</h2>
+      </div>
+
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="patient-search" placeholder="ID、イニシャル、疾患名で検索..." class="form-control">
+      </div>
+
+      <div id="patients-container">
+        <!-- 患者カードがここに動的に生成されます -->
+      </div>
+
+      <!-- 新規患者追加 FAB -->
+      <button class="fab" id="btn-add-patient-fab" aria-label="新規対象者登録">＋</button>
+    </section>
+
+    <!-- VIEW 2: 患者詳細 (履歴 & グラフ) -->
+    <section id="view-patient-detail" class="app-view">
+      <div class="patient-profile">
+        <div class="patient-info">
+          <h2 id="detail-patient-id">--</h2>
+          <p id="detail-patient-meta">--</p>
+        </div>
+        <button class="btn btn-secondary btn-icon" id="btn-edit-patient" style="width: auto; height: auto; border-radius: 8px; padding: 6px 12px; font-size: 13px;">編集</button>
+      </div>
+
+      <!-- グラフセクション -->
+      <h3 class="detail-section-title">経時変化グラフ</h3>
+      <div class="chart-container">
+        <div class="chart-filters">
+          <select id="chart-eval-select">
+            <!-- 評価項目リストが動的に入ります -->
+          </select>
+          <select id="chart-subitem-select">
+            <option value="total">合計点/代表値</option>
+          </select>
+        </div>
+        <div style="position: relative; height: 220px;">
+          <canvas id="progressionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 評価履歴一覧 -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+        <h3 class="detail-section-title" style="margin-top:0; margin-bottom:0;">評価履歴</h3>
+        <button class="btn btn-green" id="btn-new-assessment" style="width: auto; padding: 8px 16px; font-size: 13px; border-radius: 8px;">＋ 新規評価</button>
+      </div>
+      
+      <div id="history-container" class="card" style="margin-top: 12px; padding: 12px 16px;">
+        <!-- 履歴項目が動的に生成されます -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: 新規評価入力フォーム -->
+    <section id="view-assessment" class="app-view">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h2 id="assessment-title">評価の記録</h2>
+        <span id="assessment-patient-name" class="card-badge">--</span>
+      </div>
+
+      <!-- ステップ 1: 評価項目の選択 -->
+      <div id="assessment-step-select">
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">今回実施する評価項目を選択してください。</p>
+        <div class="checklist-container" id="assessment-checklist">
+          <!-- 評価項目のチェックリストが動的に生成されます -->
+        </div>
+        <button class="btn" id="btn-start-scoring" style="margin-top: 10px;">採点を開始する</button>
+      </div>
+
+      <!-- ステップ 2: 選択された項目の入力フォーム -->
+      <div id="assessment-step-form" style="display: none;">
+        <form id="active-assessment-form">
+          <div class="form-group">
+            <label for="assessment-date">評価日</label>
+            <input type="date" id="assessment-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="assessment-evaluator">評価者</label>
+            <input type="text" id="assessment-evaluator" class="form-control" placeholder="担当セラピストイニシャルなど">
+          </div>
+
+          <!-- 動的に生成される評価入力エリア -->
+          <div id="dynamic-assessment-inputs"></div>
+
+          <div class="flex-row" style="margin-top: 24px;">
+            <button type="button" class="btn btn-secondary" id="btn-back-to-select" style="flex: 1;">項目選び直す</button>
+            <button type="submit" class="btn" id="btn-save-assessment" style="flex: 2;">記録を保存する</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 4: 設定 / カスタマイズ -->
+    <section id="view-settings" class="app-view">
+      <h2>設定とカスタマイズ</h2>
+
+      <!-- 評価項目のカスタム追加 -->
+      <div class="card" style="margin-top: 20px;">
+        <h3 class="card-title">カスタム評価項目の追加</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">プリセットにない独自の評価尺度やテストを追加できます。</p>
+        
+        <form id="custom-eval-form">
+          <div class="form-group">
+            <label for="custom-name">評価名</label>
+            <input type="text" id="custom-name" class="form-control" placeholder="例: 30秒椅子立ち上がりテスト" required>
+          </div>
+          <div class="form-group">
+            <label for="custom-unit">単位</label>
+            <input type="text" id="custom-unit" class="form-control" placeholder="例: 回、秒、点など" required>
+          </div>
+          <div class="form-group">
+            <label for="custom-description">説明 / 基準</label>
+            <textarea id="custom-description" class="form-control" rows="3" placeholder="テストの方法や判定基準を記載します。"></textarea>
+          </div>
+          <button type="submit" class="btn btn-green">カスタム評価項目を追加</button>
+        </form>
+
+        <div id="custom-evals-list" style="margin-top: 20px;">
+          <!-- 登録されたカスタム項目一覧 -->
+        </div>
+      </div>
+
+      <!-- データ管理 -->
+      <div class="card">
+        <h3 class="card-title">データ管理</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">アプリのデータをファイルとして保存・復元、または初期化します。データはブラウザのローカル領域にのみ保存されています。</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button class="btn btn-secondary" id="btn-export">データをエクスポート (JSON)</button>
+          
+          <div style="position: relative;">
+            <button class="btn btn-secondary" id="btn-import-trigger" style="width: 100%;">データをインポート</button>
+            <input type="file" id="file-import" accept=".json" style="display: none;">
+          </div>
+          
+          <button class="btn btn-danger" id="btn-clear-all" style="margin-top: 10px;">すべてのデータを完全削除</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-view="view-patients">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+      <span>対象者</span>
+    </button>
+    <button class="nav-item" data-view="view-settings">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span>設定</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: 患者登録/編集 -->
+  <div class="modal-overlay" id="patient-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="patient-modal-title">新規対象者登録</h3>
+        <button class="btn-secondary" id="btn-close-patient-modal" style="width: auto; height: auto; padding: 4px 10px; border-radius: 8px;">✕</button>
+      </div>
+      <form id="patient-form">
+        <input type="hidden" id="patient-index"> <!-- 編集時に使用 -->
+        <div class="form-group">
+          <label for="patient-id">ID または イニシャル (個人特定できない形)</label>
+          <input type="text" id="patient-id" class="form-control" placeholder="例: P001, T.N など" required>
+        </div>
+        <div class="form-group">
+          <label for="patient-age">年齢</label>
+          <input type="number" id="patient-age" class="form-control" placeholder="例: 75">
+        </div>
+        <div class="form-group">
+          <label for="patient-gender">性別</label>
+          <select id="patient-gender">
+            <option value="">未選択</option>
+            <option value="男性">男性</option>
+            <option value="女性">女性</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="patient-diagnosis">主要疾患名</label>
+          <input type="text" id="patient-diagnosis" class="form-control" placeholder="例: 脳梗塞、大腿骨頚部骨折など">
+        </div>
+        <div class="form-group">
+          <label for="patient-memo">メモ</label>
+          <textarea id="patient-memo" class="form-control" rows="3" placeholder="麻痺側、リハビリ目的など"></textarea>
+        </div>
+        <div class="flex-row">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-patient">キャンセル</button>
+          <button type="submit" class="btn" id="btn-save-patient">登録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: 評価履歴詳細表示 -->
+  <div class="modal-overlay" id="history-detail-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>評価記録の詳細</h3>
+        <button class="btn-secondary" id="btn-close-history-modal" style="width: auto; height: auto; padding: 4px 10px; border-radius: 8px;">✕</button>
+      </div>
+      <div id="history-detail-meta" style="margin-bottom: 16px; font-size: 13px; color: var(--text-secondary);">
+        <!-- 評価日、評価者などの情報 -->
+      </div>
+      <div id="history-detail-content">
+        <!-- 評価項目とその数値が動的に生成されます -->
+      </div>
+      <div class="flex-row" style="margin-top: 20px;">
+        <button class="btn btn-danger" id="btn-delete-record" style="flex: 1;">この記録を削除</button>
+        <button class="btn btn-secondary" id="btn-close-history-modal-ok" style="flex: 2;">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP Logic Files -->
+  <script src="evaluations.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // PWA Service Worker 登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('Service Worker registered successfully.', reg.scope))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
