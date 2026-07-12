@@ -9,6 +9,7 @@ let state = {
   customEvaluations: [],
   currentPatientIndex: -1,
   currentRecordIndex: -1,
+  editingRecordIndex: -1, // -1: 新規評価モード, >=0: 過去レコード編集モード
   currentView: "view-patients",
   historyStack: [], // シンプルなビュー遷移履歴
   currentDomain: "neuron",
@@ -139,6 +140,16 @@ function switchView(viewId, pushToStack = true) {
       item.classList.remove("active");
     }
   });
+
+  // 対象者追加ボタン（FAB）の表示制御：一覧画面でのみ表示する
+  const addPatientBtn = document.getElementById("btn-add-patient");
+  if (addPatientBtn) {
+    if (viewId === "view-patients") {
+      addPatientBtn.style.display = "flex";
+    } else {
+      addPatientBtn.style.display = "none";
+    }
+  }
 
   if (pushToStack && state.currentView !== viewId) {
     state.historyStack.push(state.currentView);
@@ -325,6 +336,12 @@ function setupEventListeners() {
   
   // 記録削除ボタン
   document.getElementById("btn-delete-record").addEventListener("click", deleteCurrentRecord);
+
+  // 記録編集・修正ボタン
+  const editRecordBtn = document.getElementById("btn-edit-record");
+  if (editRecordBtn) {
+    editRecordBtn.addEventListener("click", editCurrentRecord);
+  }
 }
 
 // -------------------------------------------------------------
@@ -648,11 +665,9 @@ function renderHistoryList(patient) {
     return;
   }
 
-  // 日付の降順（新しい順）にソートして表示
   const sortedRecords = [...patient.records].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   sortedRecords.forEach(record => {
-    // 含まれる評価項目の名前一覧
     const evalNames = Object.keys(record.evaluations).map(id => {
       const meta = PRESET_EVALUATIONS[id] || state.customEvaluations.find(c => c.id === id);
       return meta ? meta.name.split("（")[0].split("(")[0] : id;
@@ -703,22 +718,41 @@ function showHistoryDetail(recordIndex) {
     let scoreHTML = "";
     
     if (meta && meta.inputType === "multi_scale") {
-      // 合計点表示
       scoreHTML = `<div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 6px;">${evalName}: ${evalData.total}点</div>`;
-      // 各項目の詳細
+      const excludeKeys = [
+        "total", "arm_total", "leg_total", "motor_total", "sensory_total", "static_bal", "dynamic_bal", "coordination",
+        "motor_sub", "cognitive_sub", "self_care", "respiration_sphincter", "mobility", "uems", "lems",
+        "pain", "rom", "walking", "adl", "pain_walking", "stairs", "rom_limitation", "swelling",
+        "symptoms", "findings", "adl_back"
+      ];
       const itemsListHTML = Object.keys(evalData)
-        .filter(k => k !== "total" && k !== "arm_total" && k !== "leg_total" && k !== "motor_total" && k !== "sensory_total" && k !== "static_bal" && k !== "dynamic_bal" && k !== "coordination")
+        .filter(k => !excludeKeys.includes(k))
         .map(k => {
           const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
           return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; margin-bottom: 2px;">・${itemMeta}: ${evalData[k]}点</div>`;
         }).join("");
       
-      // 中分類合計値があれば追記 (FMAやSIASなど)
       let subTotalsHTML = "";
       if (evalData.arm_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(上肢: ${evalData.arm_total}点 / 下肢: ${evalData.leg_total}点)</div>`;
-      if (evalData.motor_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(運動: ${evalData.motor_total}点 / 感覚: ${evalData.sensory_total}点)</div>`;
+      if (evalId === "sias" && evalData.motor_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(運動: ${evalData.motor_total}点 / 感覚: ${evalData.sensory_total}点)</div>`;
       if (evalData.static_bal !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(静的: ${evalData.static_bal}点 / 動的: ${evalData.dynamic_bal}点 / 協調性: ${evalData.coordination}点)</div>`;
-
+      if (evalData.motor_sub !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(運動ADL: ${evalData.motor_sub}点 / 認知ADL: ${evalData.cognitive_sub}点)</div>`;
+      if (evalId === "scim") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(セルフケア: ${evalData.self_care}点 / 呼吸・排泄: ${evalData.respiration_sphincter}点 / 移動: ${evalData.mobility}点)</div>`;
+      }
+      if (evalId === "ais") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(UEMS: ${evalData.uems}点 / LEMS: ${evalData.lems}点)</div>`;
+      }
+      if (evalId === "joa_hip") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${evalData.pain}点 / 可動域: ${evalData.rom}点 / 歩行: ${evalData.walking}点 / ADL: ${evalData.adl}点)</div>`;
+      }
+      if (evalId === "joa_knee") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(痛み・歩行: ${evalData.pain_walking}点 / 階段: ${evalData.stairs}点 / 可動域制限: ${evalData.rom_limitation}点 / 腫脹: ${evalData.swelling}点)</div>`;
+      }
+      if (evalId === "joa_back") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(自覚症状: ${evalData.symptoms}点 / 客観的所見: ${evalData.findings}点 / ADL: ${evalData.adl_back}点)</div>`;
+      }
+ 
       scoreHTML += itemsListHTML + subTotalsHTML;
 
     } else if (meta && meta.inputType === "rom") {
@@ -768,7 +802,6 @@ function showHistoryDetail(recordIndex) {
         <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・Borg主観的運動強度: ${evalData.borg_before || '--'} (前) → ${evalData.borg_after || '--'} (後)</div>
       `;
     } else {
-      // 汎用（数値1つのテスト、カスタム項目など）
       const val = evalData.score !== undefined ? evalData.score : (evalData.time || "");
       const unit = meta ? meta.unit || "" : "";
       scoreHTML = `<div style="font-weight: 700;">${evalName}: <span style="color: var(--accent-blue);">${val} ${unit}</span></div>`;
@@ -799,6 +832,194 @@ function deleteCurrentRecord() {
   }
 }
 
+// 過去レコードの編集・修正モードの起動
+function editCurrentRecord() {
+  const pIndex = state.currentPatientIndex;
+  const rIndex = state.currentRecordIndex;
+  if (pIndex < 0 || rIndex < 0) return;
+
+  hideModal("history-detail-modal");
+  
+  const p = state.patients[pIndex];
+  const record = p.records[rIndex];
+  
+  // 編集モードをセット
+  state.editingRecordIndex = rIndex;
+  
+  // 評価画面の表示
+  switchView("view-assessment");
+  document.getElementById("assessment-patient-name").textContent = `ID: ${p.id}`;
+  document.getElementById("assessment-step-select").style.display = "block";
+  document.getElementById("assessment-step-form").style.display = "none";
+  
+  // 過去の日付と評価者を設定
+  document.getElementById("assessment-date").value = record.date;
+  document.getElementById("assessment-evaluator").value = record.evaluator || "";
+  
+  // 過去の評価項目を取得
+  const checkedIds = Object.keys(record.evaluations);
+  state.selectedEvaluations = [...checkedIds];
+  
+  // ドメインの特定
+  let defaultDomain = "neuron";
+  if (checkedIds.length > 0) {
+    const firstId = checkedIds[0];
+    const meta = PRESET_EVALUATIONS[firstId] || state.customEvaluations.find(c => c.id === firstId);
+    if (meta && meta.domain) {
+      defaultDomain = meta.domain;
+    }
+  }
+  
+  state.currentDomain = defaultDomain;
+  state.currentEvalSetId = "";
+  
+  // タブの初期化
+  document.querySelectorAll(".domain-tab").forEach(tab => {
+    if (tab.getAttribute("data-domain") === defaultDomain) {
+      tab.classList.add("active");
+      tab.style.borderBottomColor = "var(--accent-blue)";
+    } else {
+      tab.classList.remove("active");
+      tab.style.borderBottomColor = "transparent";
+    }
+  });
+  
+  updateEvalSetDropdown();
+  
+  // アコーディオンの描画とチェック状態の復元
+  renderAssessmentAccordion(defaultDomain);
+  
+  // 直接「採点を開始する」画面に遷移
+  startScoring();
+  
+  // 値の復元
+  restoreFormData(record.evaluations);
+}
+
+// 過去評価データのフォーム自動セット（編集時）
+function restoreFormData(evalsData) {
+  Object.keys(evalsData).forEach(evalId => {
+    const data = evalsData[evalId];
+    const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+    if (!meta) return;
+
+    if (meta.inputType === "multi_scale" || meta.inputType === "single_select") {
+      const itemsList = meta.items || [];
+      itemsList.forEach(item => {
+        // SCIMなどの小計キー(computed)を除外して値を取得
+        const itemVal = data[item.id] !== undefined ? data[item.id] : data.score;
+        if (itemVal === undefined || itemVal === null) return;
+        
+        const section = document.querySelector(`.assessment-section[data-eval-id="${evalId}"]`);
+        if (section) {
+          const choice = section.querySelector(`.score-choice[data-item-id="${item.id}"][data-score="${itemVal}"]`);
+          if (choice) {
+            choice.classList.add("selected");
+            const input = section.querySelector(`input[name="${evalId}_${item.id}_score"]`);
+            if (input) input.value = itemVal;
+          }
+        }
+      });
+      updateSectionTotal(evalId);
+    }
+    else if (meta.inputType === "rom") {
+      Object.keys(meta.subItems).forEach(key => {
+        const val = data[key];
+        if (val) {
+          const lInput = document.querySelector(`input[name="${evalId}_${key}_left"]`);
+          const rInput = document.querySelector(`input[name="${evalId}_${key}_right"]`);
+          if (lInput && val.left !== null) lInput.value = val.left;
+          if (rInput && val.right !== null) rInput.value = val.right;
+        }
+      });
+    }
+    else if (meta.inputType === "bilateral_numeric") {
+      const lInput = document.querySelector(`input[name="${evalId}_left"]`);
+      const rInput = document.querySelector(`input[name="${evalId}_right"]`);
+      if (lInput && data.left !== null) lInput.value = data.left;
+      if (rInput && data.right !== null) rInput.value = data.right;
+    }
+    else if (meta.inputType === "walk_10m_calc") {
+      const timeInput = document.getElementById(`${evalId}_time`);
+      const stepsInput = document.getElementById(`${evalId}_steps`);
+      if (timeInput && data.time !== null) timeInput.value = data.time;
+      if (stepsInput && data.steps !== null) stepsInput.value = data.steps;
+      
+      const speedSpan = document.getElementById(`${evalId}_speed_computed`);
+      const strideSpan = document.getElementById(`${evalId}_stride_computed`);
+      if (speedSpan && data.speed) speedSpan.textContent = data.speed;
+      if (strideSpan && data.stride) strideSpan.textContent = data.stride;
+    }
+    else if (meta.inputType === "timer_numeric") {
+      const timeInput = document.getElementById(`${evalId}_time`);
+      if (timeInput && data.time !== null) timeInput.value = data.time;
+    }
+    else if (meta.inputType === "walk_6min_custom") {
+      const distInput = document.querySelector(`input[name="${evalId}_distance"]`);
+      const beforeSelect = document.querySelector(`select[name="${evalId}_borg_before"]`);
+      const afterSelect = document.querySelector(`select[name="${evalId}_borg_after"]`);
+      if (distInput && data.distance !== null) distInput.value = data.distance;
+      if (beforeSelect && data.borg_before !== null) beforeSelect.value = data.borg_before;
+      if (afterSelect && data.borg_after !== null) afterSelect.value = data.borg_after;
+    }
+    else if (meta.inputType === "brs_custom") {
+      const armSelect = document.querySelector(`select[name="${evalId}_arm"]`);
+      const handSelect = document.querySelector(`select[name="${evalId}_hand"]`);
+      const legSelect = document.querySelector(`select[name="${evalId}_leg"]`);
+      if (armSelect && data.arm) armSelect.value = data.arm;
+      if (handSelect && data.hand) handSelect.value = data.hand;
+      if (legSelect && data.leg) legSelect.value = data.leg;
+    }
+    else if (meta.inputType === "mas_custom") {
+      const muscleInput = document.querySelector(`input[name="${evalId}_target_muscle"]`);
+      const scoreSelect = document.querySelector(`select[name="${evalId}_score"]`);
+      if (muscleInput && data.target_muscle) muscleInput.value = data.target_muscle;
+      if (scoreSelect && data.score) scoreSelect.value = data.score;
+    }
+    else if (meta.inputType === "stef_custom") {
+      meta.items.forEach(item => {
+        const itemVal = data[item.id];
+        if (itemVal) {
+          const tL = document.querySelector(`input[name="${evalId}_${item.id}_time_left"]`);
+          const sL = document.querySelector(`select[name="${evalId}_${item.id}_score_left"]`);
+          const tR = document.querySelector(`input[name="${evalId}_${item.id}_time_right"]`);
+          const sR = document.querySelector(`select[name="${evalId}_${item.id}_score_right"]`);
+          
+          if (tL && itemVal.time_left !== null) tL.value = itemVal.time_left;
+          if (sL && itemVal.score_left !== null) sL.value = itemVal.score_left;
+          if (tR && itemVal.time_right !== null) tR.value = itemVal.time_right;
+          if (sR && itemVal.score_right !== null) sR.value = itemVal.score_right;
+        }
+      });
+      const lTotal = document.getElementById(`${evalId}_left_total_computed`);
+      const rTotal = document.getElementById(`${evalId}_right_total_computed`);
+      if (lTotal && data.left_total !== null) lTotal.textContent = data.left_total;
+      if (rTotal && data.right_total !== null) rTotal.textContent = data.right_total;
+    }
+    else if (meta.inputType === "mal_custom") {
+      meta.actions.forEach(act => {
+        const actVal = data[act.id];
+        if (actVal) {
+          const aouSelect = document.querySelector(`select[name="${evalId}_${act.id}_aou"]`);
+          const qomSelect = document.querySelector(`select[name="${evalId}_${act.id}_qom"]`);
+          if (aouSelect && actVal.aou !== null) aouSelect.value = actVal.aou;
+          if (qomSelect && actVal.qom !== null) qomSelect.value = actVal.qom;
+        }
+      });
+      const aouMean = document.getElementById(`${evalId}_aou_mean_computed`);
+      const qomMean = document.getElementById(`${evalId}_qom_mean_computed`);
+      if (aouMean && data.aou_mean !== null) aouMean.textContent = data.aou_mean;
+      if (qomMean && data.qom_mean !== null) qomMean.textContent = data.qom_mean;
+    }
+    else {
+      const scoreInput = document.querySelector(`input[name="${evalId}_score"]`);
+      const memoInput = document.querySelector(`input[name="${evalId}_memo"]`);
+      if (scoreInput && data.score !== null) scoreInput.value = data.score;
+      if (memoInput && data.memo) memoInput.value = data.memo;
+    }
+  });
+}
+
 // -------------------------------------------------------------
 // 新規評価入力フォームの生成・処理
 // -------------------------------------------------------------
@@ -812,6 +1033,9 @@ function showAssessmentSetup(patientIndex) {
   document.getElementById("assessment-step-form").style.display = "none";
   
   // 領域デフォルト
+  state.currentPatientIndex = patientIndex;
+  state.editingRecordIndex = -1;
+  state.selectedEvaluations = [];
   state.currentDomain = "neuron";
   state.currentEvalSetId = "";
   
@@ -978,20 +1202,35 @@ function createChecklistItem(container, id, name, domain, category) {
   checkbox.setAttribute("data-domain", domain);
   checkbox.setAttribute("data-category", category);
   
-  // すでに選択されている（またはセット選択されている）かの確認
-  if (state.currentEvalSetId) {
+  // すでに選択されている（編集時、またはセット選択されている）かの確認
+  let shouldCheck = false;
+  if (state.selectedEvaluations && state.selectedEvaluations.includes(id)) {
+    shouldCheck = true;
+  } else if (state.currentEvalSetId) {
     const activeSet = state.evalSets.find(s => s.id === state.currentEvalSetId);
     if (activeSet && activeSet.evaluations.includes(id)) {
-      checkbox.checked = true;
-      item.classList.add("checked");
+      shouldCheck = true;
+      // ステート側にも追加
+      if (!state.selectedEvaluations.includes(id)) {
+        state.selectedEvaluations.push(id);
+      }
     }
+  }
+  
+  if (shouldCheck) {
+    checkbox.checked = true;
+    item.classList.add("checked");
   }
 
   checkbox.addEventListener("change", () => {
     if (checkbox.checked) {
       item.classList.add("checked");
+      if (!state.selectedEvaluations.includes(id)) {
+        state.selectedEvaluations.push(id);
+      }
     } else {
       item.classList.remove("checked");
+      state.selectedEvaluations = state.selectedEvaluations.filter(x => x !== id);
     }
     updateAccordionBadge(category);
   });
@@ -1772,7 +2011,7 @@ function handleAssessmentSubmit(e) {
         });
         data.total = total;
 
-        // 特殊合計 (FMA / SIAS / TIS / ARAT)
+        // 特殊合計 (FMA / SIAS / TIS / ARAT / SCIM / AIS / JOA等)
         if (evalId === "fma") {
           data.arm_total = data.ue_reflex + data.ue_flex_syn + data.ue_ext_syn + data.ue_mix + data.ue_sepa + data.ue_normal_ref + data.ue_wrist + data.ue_hand + data.ue_coord;
           data.leg_total = data.le_reflex + data.le_flex_syn + data.le_ext_syn + data.le_mix + data.le_sepa + data.le_normal_ref + data.le_coord;
@@ -1780,7 +2019,6 @@ function handleAssessmentSubmit(e) {
           data.motor_total = data.m_hip + data.m_knee + data.m_foot + data.m_proximal + data.m_distal;
           data.sensory_total = data.s_touch + data.s_position;
         } else if (evalId === "tis") {
-          // 下位項目の合計
           data.static_bal = data.static_bal || 0;
           data.dynamic_bal = data.dynamic_bal || 0;
           data.coordination = data.coordination || 0;
@@ -1789,6 +2027,29 @@ function handleAssessmentSubmit(e) {
           data.grip_sub = (data.gr1 || 0) + (data.gr2 || 0) + (data.gr3 || 0) + (data.gr4 || 0);
           data.pinch_sub = (data.p1 || 0) + (data.p2 || 0) + (data.p3 || 0) + (data.p4 || 0) + (data.p5 || 0) + (data.p6 || 0);
           data.gross_sub = (data.gm1 || 0) + (data.gm2 || 0) + (data.gm3 || 0);
+        } else if (evalId === "scim") {
+          data.self_care = (data.q1_feeding || 0) + (data.q2_bathing_upper || 0) + (data.q3_bathing_lower || 0) + (data.q4_dressing_upper || 0) + (data.q5_dressing_lower || 0) + (data.q6_grooming || 0);
+          data.respiration_sphincter = (data.q7_respiration || 0) + (data.q8_sphincter_urine || 0) + (data.q9_sphincter_bowel || 0) + (data.q10_toilet_use || 0);
+          data.mobility = (data.q11_mobility_bed || 0) + (data.q12_mobility_transfers || 0) + (data.q13_mobility_toilet || 0) + (data.q14_mobility_car || 0) + (data.q15_mobility_ground || 0) + (data.q16_mobility_ground_long || 0) + (data.q17_mobility_stairs || 0) + (data.q18_mobility_transfers_floor || 0);
+        } else if (evalId === "ais") {
+          data.uems = (data.uems_c5 || 0) + (data.uems_c6 || 0) + (data.uems_c7 || 0) + (data.uems_c8 || 0) + (data.uems_t1 || 0);
+          data.lems = (data.lems_l2 || 0) + (data.lems_l3 || 0) + (data.lems_l4 || 0) + (data.lems_l5 || 0) + (data.lems_s1 || 0);
+          data.motor_total = data.uems + data.lems;
+          data.total = data.motor_total; // 合計値を運動合計点に設定
+        } else if (evalId === "joa_hip") {
+          data.pain = data.pain || 0;
+          data.rom = data.rom || 0;
+          data.walking = data.walking || 0;
+          data.adl = data.adl || 0;
+        } else if (evalId === "joa_knee") {
+          data.pain_walking = data.pain_walking || 0;
+          data.stairs = data.stairs || 0;
+          data.rom_limitation = data.rom_limitation || 0;
+          data.swelling = data.swelling || 0;
+        } else if (evalId === "joa_back") {
+          data.symptoms = data.symptoms || 0;
+          data.findings = data.findings || 0;
+          data.adl_back = data.adl_back || 0;
         }
       } 
       else if (meta.inputType === "rom") {
@@ -1907,16 +2168,24 @@ function handleAssessmentSubmit(e) {
     evaluations
   };
 
-  // 既存の同じ日付のレコードがあればマージするか上書きするか確認
-  const existingRecordIndex = state.patients[pIndex].records.findIndex(r => r.date === date);
-  if (existingRecordIndex >= 0) {
-    if (confirm(`${date} の測定記録はすでに存在します。上書きしますか？`)) {
-      state.patients[pIndex].records[existingRecordIndex] = record;
-    } else {
-      return; // キャンセル
-    }
+  // 編集モードか新規登録モードかで保存処理を分岐
+  if (state.editingRecordIndex >= 0) {
+    // 既存レコードの上書き更新
+    state.patients[pIndex].records[state.editingRecordIndex] = record;
+    state.editingRecordIndex = -1; // 編集モード解除
+    alert("測定記録を修正・更新しました。");
   } else {
-    state.patients[pIndex].records.push(record);
+    // 新規登録：同じ日付の重複チェック
+    const existingRecordIndex = state.patients[pIndex].records.findIndex(r => r.date === date);
+    if (existingRecordIndex >= 0) {
+      if (confirm(`${date} の測定記録はすでに存在します。上書きしますか？`)) {
+        state.patients[pIndex].records[existingRecordIndex] = record;
+      } else {
+        return; // キャンセル
+      }
+    } else {
+      state.patients[pIndex].records.push(record);
+    }
   }
 
   savePatients();
@@ -2114,7 +2383,7 @@ function getDemoData() {
       age: 78,
       gender: "男性",
       diagnosis: "脳梗塞（左片麻痺）",
-      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARATに加えて、BI、PASS、FIM、NIHSS、MMSE、BLS、SCPを測定。",
+      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARAT、BI、PASS、FIM、NIHSS、MMSE、BLS、SCP、SCIM、AIS、JOA股関節/膝/腰痛を網羅測定。",
       records: [
         {
           date: "2026-06-01",
@@ -2210,6 +2479,29 @@ function getDemoData() {
             scp: {
               total: 3.5,
               q1a: 0.75, q1b: 0.75, q2a: 0.5, q2b: 0.5, q3a: 0.5, q3b: 0.5
+            },
+            scim: {
+              total: 35,
+              self_care: 8, respiration_sphincter: 12, mobility: 15,
+              q1_feeding: 1, q2_bathing_upper: 1, q3_bathing_lower: 1, q4_dressing_upper: 1, q5_dressing_lower: 1, q6_grooming: 1,
+              q7_respiration: 4, q8_sphincter_urine: 3, q9_sphincter_bowel: 2, q10_toilet_use: 1,
+              q11_mobility_bed: 2, q12_mobility_transfers: 1, q13_mobility_toilet: 1, q14_mobility_car: 0, q15_mobility_ground: 1, q16_mobility_ground_long: 0, q17_mobility_stairs: 0, q18_mobility_transfers_floor: 0
+            },
+            ais: {
+              total: 32,
+              motor_total: 32, uems: 20, lems: 12,
+              level: "C5-C8", ais_class: "C",
+              uems_c5: 4, uems_c6: 4, uems_c7: 4, uems_c8: 4, uems_t1: 4,
+              lems_l2: 4, lems_l3: 4, lems_l4: 2, lems_l5: 2, lems_s1: 0
+            },
+            joa_hip: {
+              total: 45, pain: 15, rom: 10, walking: 10, adl: 10
+            },
+            joa_knee: {
+              total: 40, pain_walking: 10, stairs: 10, rom_limitation: 15, swelling: 5
+            },
+            joa_back: {
+              total: 12, symptoms: 3, findings: 4, adl_back: 5
             }
           }
         },
@@ -2307,6 +2599,29 @@ function getDemoData() {
             scp: {
               total: 1.5,
               q1a: 0.25, q1b: 0.25, q2a: 0.25, q2b: 0.25, q3a: 0.25, q3b: 0.25
+            },
+            scim: {
+              total: 58,
+              self_care: 12, respiration_sphincter: 22, mobility: 24,
+              q1_feeding: 2, q2_bathing_upper: 2, q3_bathing_lower: 2, q4_dressing_upper: 2, q5_dressing_lower: 2, q6_grooming: 2,
+              q7_respiration: 6, q8_sphincter_urine: 6, q9_sphincter_bowel: 5, q10_toilet_use: 2,
+              q11_mobility_bed: 4, q12_mobility_transfers: 1, q13_mobility_toilet: 1, q14_mobility_car: 1, q15_mobility_ground: 4, q16_mobility_ground_long: 3, q17_mobility_stairs: 1, q18_mobility_transfers_floor: 1
+            },
+            ais: {
+              total: 55,
+              motor_total: 55, uems: 35, lems: 20,
+              level: "C5-C8", ais_class: "D",
+              uems_c5: 8, uems_c6: 8, uems_c7: 6, uems_c8: 8, uems_t1: 5,
+              lems_l2: 6, lems_l3: 6, lems_l4: 4, lems_l5: 4, lems_s1: 0
+            },
+            joa_hip: {
+              total: 65, pain: 25, rom: 15, walking: 15, adl: 10
+            },
+            joa_knee: {
+              total: 65, pain_walking: 20, stairs: 15, rom_limitation: 25, swelling: 5
+            },
+            joa_back: {
+              total: 20, symptoms: 5, findings: 5, adl_back: 10
             }
           }
         },
@@ -2404,6 +2719,29 @@ function getDemoData() {
             scp: {
               total: 0.0,
               q1a: 0, q1b: 0, q2a: 0, q2b: 0, q3a: 0, q3b: 0
+            },
+            scim: {
+              total: 85,
+              self_care: 18, respiration_sphincter: 32, mobility: 35,
+              q1_feeding: 3, q2_bathing_upper: 3, q3_bathing_lower: 3, q4_dressing_upper: 3, q5_dressing_lower: 3, q6_grooming: 3,
+              q7_respiration: 10, q8_sphincter_urine: 12, q9_sphincter_bowel: 11, q10_toilet_use: 3,
+              q11_mobility_bed: 6, q12_mobility_transfers: 2, q13_mobility_toilet: 2, q14_mobility_car: 2, q15_mobility_ground: 7, q16_mobility_ground_long: 7, q17_mobility_stairs: 3, q18_mobility_transfers_floor: 2
+            },
+            ais: {
+              total: 84,
+              motor_total: 84, uems: 46, lems: 38,
+              level: "C5-C8", ais_class: "D",
+              uems_c5: 10, uems_c6: 10, uems_c7: 8, uems_c8: 10, uems_t1: 8,
+              lems_l2: 8, lems_l3: 8, lems_l4: 8, lems_l5: 8, lems_s1: 6
+            },
+            joa_hip: {
+              total: 90, pain: 35, rom: 20, walking: 20, adl: 15
+            },
+            joa_knee: {
+              total: 90, pain_walking: 30, stairs: 20, rom_limitation: 30, swelling: 10
+            },
+            joa_back: {
+              total: 27, symptoms: 7, findings: 6, adl_back: 14
             }
           }
         }

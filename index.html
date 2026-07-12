@@ -120,11 +120,16 @@
         <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 12px;">実施する評価項目を開いてチェックを入れてください。</p>
         
         <!-- アコーディオンコンテナ -->
-        <div class="accordion-container" id="assessment-accordion-list" style="margin-bottom: 16px;">
-          <!-- 階層化チェックリストが動的に生成されます -->
+        <div class="accordion-container-scroll" style="max-height: 55vh; overflow-y: auto; padding-right: 4px; margin-bottom: 12px;">
+          <div class="accordion-container" id="assessment-accordion-list">
+            <!-- 階層化チェックリストが動的に生成されます -->
+          </div>
         </div>
 
-        <button class="btn" id="btn-start-scoring" style="margin-top: 10px; width: 100%;">採点を開始する</button>
+        <!-- 下部固定のアクションボタン -->
+        <div class="sticky-action-container" style="background-color: var(--bg-card); border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 8px;">
+          <button class="btn" id="btn-start-scoring" style="width: 100%; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);">採点を開始する</button>
+        </div>
       </div>
 
       <!-- ステップ 2: 選択された項目の入力フォーム -->
@@ -268,9 +273,10 @@
       <div id="history-detail-content">
         <!-- 評価項目とその数値が動的に生成されます -->
       </div>
-      <div class="flex-row" style="margin-top: 20px;">
-        <button class="btn btn-danger" id="btn-delete-record" style="flex: 1;">この記録を削除</button>
-        <button class="btn btn-secondary" id="btn-close-history-modal-ok" style="flex: 2;">閉じる</button>
+      <div class="flex-row" style="margin-top: 20px; gap: 8px;">
+        <button class="btn btn-danger" id="btn-delete-record" style="flex: 1; padding: 10px 4px; font-size: 13px;">削除</button>
+        <button class="btn btn-green" id="btn-edit-record" style="flex: 1; padding: 10px 4px; font-size: 13px;">編集・修正</button>
+        <button class="btn btn-secondary" id="btn-close-history-modal-ok" style="flex: 1; padding: 10px 4px; font-size: 13px;">閉じる</button>
       </div>
     </div>
   </div>
