@@ -275,6 +275,15 @@
     </div>
   </div>
 
+  <!-- Error Tracker for Mobile Debugging -->
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      const errorMsg = "エラーが発生しました:\n" + message + "\n場所: " + source + " (" + lineno + "行目)";
+      alert(errorMsg);
+      return false;
+    };
+  </script>
+
   <!-- APP Logic Files -->
   <script src="evaluations.js?v=4"></script>
   <script src="evaluations_extension.js?v=4"></script>
