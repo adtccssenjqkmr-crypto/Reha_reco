@@ -96,11 +96,35 @@
 
       <!-- ステップ 1: 評価項目の選択 -->
       <div id="assessment-step-select">
-        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">今回実施する評価項目を選択してください。</p>
-        <div class="checklist-container" id="assessment-checklist">
-          <!-- 評価項目のチェックリストが動的に生成されます -->
+        <!-- 評価セット管理セクション -->
+        <div class="eval-set-management" style="margin-bottom: 16px; padding: 12px; background-color: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+          <label for="eval-set-select" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">評価項目のセット選択</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="eval-set-select" class="form-control" style="flex: 3; padding: 6px 12px; height: 36px; font-size: 13px;">
+              <!-- 評価セットが動的に追加されます -->
+            </select>
+            <button type="button" class="btn btn-secondary" id="btn-delete-eval-set" style="flex: 1; padding: 0 10px; height: 36px; font-size: 12px; white-space: nowrap; background-color: var(--accent-danger); color: white; display: none;">セット削除</button>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button type="button" class="btn btn-secondary" id="btn-save-eval-set" style="flex: 1; padding: 0 10px; height: 32px; font-size: 12px; white-space: nowrap;">現在の選択をセット保存</button>
+          </div>
         </div>
-        <button class="btn" id="btn-start-scoring" style="margin-top: 10px;">採点を開始する</button>
+
+        <!-- 領域切り替えタブ -->
+        <div class="domain-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; gap: 8px;">
+          <button type="button" class="domain-tab active" data-domain="neuron" style="flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600; background: none; border: none; border-bottom: 2px solid var(--accent-blue); color: var(--text-primary); cursor: pointer;">脳卒中・神経系</button>
+          <button type="button" class="domain-tab" data-domain="ortho" style="flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer;">整形外科系</button>
+          <button type="button" class="domain-tab" data-domain="custom" style="flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer;">カスタム</button>
+        </div>
+
+        <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 12px;">実施する評価項目を開いてチェックを入れてください。</p>
+        
+        <!-- アコーディオンコンテナ -->
+        <div class="accordion-container" id="assessment-accordion-list" style="margin-bottom: 16px;">
+          <!-- 階層化チェックリストが動的に生成されます -->
+        </div>
+
+        <button class="btn" id="btn-start-scoring" style="margin-top: 10px; width: 100%;">採点を開始する</button>
       </div>
 
       <!-- ステップ 2: 選択された項目の入力フォーム -->
@@ -253,6 +277,7 @@
 
   <!-- APP Logic Files -->
   <script src="evaluations.js"></script>
+  <script src="evaluations_extension.js"></script>
   <script src="charts.js"></script>
   <script src="app.js"></script>
   <script>

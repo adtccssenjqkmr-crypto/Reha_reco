@@ -32,16 +32,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // ローカルストレージからデータをロード
 function loadData() {
   try {
+    state.patients = JSON.parse(localStorage.getItem("rehareco_patients") || "[]");
     state.customEvaluations = JSON.parse(localStorage.getItem("rehareco_custom_evaluations") || "[]");
-    
-    const storedPatients = localStorage.getItem("rehareco_patients");
-    if (storedPatients) {
-      state.patients = JSON.parse(storedPatients);
-    } else {
-      // デモデータの自動生成
-      state.patients = getDemoData();
-      savePatients();
-    }
   } catch (e) {
     console.error("データの読み込みに失敗しました:", e);
     state.patients = [];
@@ -83,16 +75,6 @@ function switchView(viewId, pushToStack = true) {
     state.historyStack.push(state.currentView);
   }
   state.currentView = viewId;
-
-  // FABボタンの表示制御 (患者一覧の時のみ表示)
-  const fab = document.getElementById("btn-add-patient-fab");
-  if (fab) {
-    if (viewId === "view-patients") {
-      fab.style.display = "flex";
-    } else {
-      fab.style.display = "none";
-    }
-  }
 
   // ヘッダーアクション（戻るボタンなど）の制御
   renderHeaderAction();
@@ -172,16 +154,6 @@ function setupEventListeners() {
   document.getElementById("btn-close-patient-modal").addEventListener("click", hidePatientModal);
   document.getElementById("btn-cancel-patient").addEventListener("click", hidePatientModal);
 
-  const deletePatientBtn = document.getElementById("btn-delete-patient");
-  if (deletePatientBtn) {
-    deletePatientBtn.addEventListener("click", () => {
-      const index = parseInt(document.getElementById("patient-index").value);
-      if (index >= 0) {
-        handlePatientDelete(index);
-      }
-    });
-  }
-
   // 履歴詳細モーダルの閉じるボタン類
   document.getElementById("btn-close-history-modal").addEventListener("click", () => hideModal("history-detail-modal"));
   document.getElementById("btn-close-history-modal-ok").addEventListener("click", () => hideModal("history-detail-modal"));
@@ -227,6 +199,46 @@ function setupEventListeners() {
 
   if (chartSubitemSelect) {
     chartSubitemSelect.addEventListener("change", triggerChartUpdate);
+  }
+
+  // 領域タブ切り替え
+  document.querySelectorAll(".domain-tab").forEach(tab => {
+    tab.addEventListener("click", (e) => {
+      document.querySelectorAll(".domain-tab").forEach(t => {
+        t.classList.remove("active");
+        t.style.borderBottomColor = "transparent";
+      });
+      tab.classList.add("active");
+      tab.style.borderBottomColor = "var(--accent-blue)";
+      
+      const domain = tab.getAttribute("data-domain");
+      state.currentDomain = domain;
+      renderAssessmentAccordion(domain);
+    });
+  });
+
+  // 評価セット選択
+  const evalSetSelect = document.getElementById("eval-set-select");
+  if (evalSetSelect) {
+    evalSetSelect.addEventListener("change", (e) => {
+      applyEvalSet(e.target.value);
+    });
+  }
+
+  // 評価セット保存
+  const saveEvalSetBtn = document.getElementById("btn-save-eval-set");
+  if (saveEvalSetBtn) {
+    saveEvalSetBtn.addEventListener("click", () => {
+      saveCurrentAsEvalSet();
+    });
+  }
+
+  // 評価セット削除
+  const deleteEvalSetBtn = document.getElementById("btn-delete-eval-set");
+  if (deleteEvalSetBtn) {
+    deleteEvalSetBtn.addEventListener("click", () => {
+      deleteCurrentEvalSet();
+    });
   }
 
   // データ管理関連
@@ -314,7 +326,6 @@ function showPatientModal(index = -1) {
   const modal = document.getElementById("patient-modal");
   const form = document.getElementById("patient-form");
   const title = document.getElementById("patient-modal-title");
-  const deleteBtn = document.getElementById("btn-delete-patient");
   
   form.reset();
   document.getElementById("patient-index").value = index;
@@ -328,11 +339,9 @@ function showPatientModal(index = -1) {
     document.getElementById("patient-gender").value = p.gender || "";
     document.getElementById("patient-diagnosis").value = p.diagnosis || "";
     document.getElementById("patient-memo").value = p.memo || "";
-    if (deleteBtn) deleteBtn.style.display = "inline-block";
   } else {
     title.textContent = "新規対象者登録";
     document.getElementById("patient-id").disabled = false;
-    if (deleteBtn) deleteBtn.style.display = "none";
   }
 
   modal.classList.add("active");
@@ -340,25 +349,6 @@ function showPatientModal(index = -1) {
 
 function hidePatientModal() {
   document.getElementById("patient-modal").classList.remove("active");
-}
-
-function handlePatientDelete(index) {
-  const p = state.patients[index];
-  if (!p) return;
-
-  if (confirm(`本当に対象者「ID: ${p.id}」を削除しますか？\n※この対象者に関する過去すべての評価記録も完全に削除されます。この操作は取り消せません。`)) {
-    if (confirm("【最終確認】本当に削除してもよろしいですか？")) {
-      state.patients.splice(index, 1);
-      savePatients();
-      hidePatientModal();
-      renderPatientsList();
-      
-      // もし現在詳細画面にいる場合は、患者一覧に戻る
-      if (state.currentView === "view-patient-detail") {
-        switchView("view-patients");
-      }
-    }
-  }
 }
 
 function handlePatientSubmit(e) {
@@ -435,21 +425,75 @@ function initChartFilterDropdowns(patient) {
   // 測定したことがある項目、なければプリセットすべてを表示
   const listItems = measuredEvalIds.size > 0 ? Array.from(measuredEvalIds) : Object.keys(PRESET_EVALUATIONS);
 
+  // 1. プリセット項目を領域別・カテゴリー別に分類して optgroup 生成
+  const grouped = {};
+  
+  Object.keys(REHAB_DOMAINS).forEach(dId => {
+    grouped[dId] = {};
+    Object.keys(REHAB_DOMAINS[dId].categories).forEach(cId => {
+      grouped[dId][cId] = [];
+    });
+  });
+  grouped.custom = [];
+
   listItems.forEach(id => {
-    const meta = PRESET_EVALUATIONS[id] || state.customEvaluations.find(c => c.id === id);
+    const meta = PRESET_EVALUATIONS[id];
     if (meta) {
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = meta.name;
-      select.appendChild(opt);
+      const dId = meta.domain || "neuron";
+      const cId = meta.category || "neurology";
+      if (grouped[dId] && grouped[dId][cId]) {
+        grouped[dId][cId].push({ id, name: meta.name });
+      }
+    } else {
+      const custom = state.customEvaluations.find(c => c.id === id);
+      if (custom) {
+        grouped.custom.push({ id, name: custom.name });
+      }
     }
   });
 
-  if (listItems.length > 0) {
-    updateChartSubitemDropdown(listItems[0]);
+  // ドロップダウンに追加
+  Object.keys(REHAB_DOMAINS).forEach(dId => {
+    const dMeta = REHAB_DOMAINS[dId];
+    
+    Object.keys(dMeta.categories).forEach(cId => {
+      const cName = dMeta.categories[cId];
+      const items = grouped[dId][cId];
+      
+      if (items && items.length > 0) {
+        const group = document.createElement("optgroup");
+        group.label = `${dMeta.name} - ${cName}`;
+        
+        items.forEach(item => {
+          const opt = document.createElement("option");
+          opt.value = item.id;
+          opt.textContent = item.name;
+          group.appendChild(opt);
+        });
+        select.appendChild(group);
+      }
+    });
+  });
+
+  // カスタム項目を追加
+  if (grouped.custom.length > 0) {
+    const group = document.createElement("optgroup");
+    group.label = "カスタム追加項目";
+    grouped.custom.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.id;
+      opt.textContent = item.name;
+      group.appendChild(opt);
+    });
+    select.appendChild(group);
+  }
+
+  // 初期値のロード
+  if (select.options.length > 0) {
+    select.selectedIndex = 0;
+    updateChartSubitemDropdown(select.value);
     triggerChartUpdate();
   } else {
-    // 測定履歴が一切ない場合
     showNoChartDataMessage("progressionChart");
   }
 }
@@ -605,8 +649,7 @@ function showHistoryDetail(recordIndex) {
       if (evalData.arm_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(上肢: ${evalData.arm_total}点 / 下肢: ${evalData.leg_total}点)</div>`;
       if (evalData.motor_total !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(運動: ${evalData.motor_total}点 / 感覚: ${evalData.sensory_total}点)</div>`;
       if (evalData.static_bal !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(静的: ${evalData.static_bal}点 / 動的: ${evalData.dynamic_bal}点 / 協調性: ${evalData.coordination}点)</div>`;
-      if (evalData.grasp_sub !== undefined) subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(Grasp: ${evalData.grasp_sub}点 / Grip: ${evalData.grip_sub}点 / Pinch: ${evalData.pinch_sub}点 / Gross: ${evalData.gross_sub}点)</div>`;
-      
+
       scoreHTML += itemsListHTML + subTotalsHTML;
 
     } else if (meta && meta.inputType === "rom") {
@@ -655,40 +698,6 @@ function showHistoryDetail(recordIndex) {
         <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・歩行距離: ${evalData.distance} m</div>
         <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・Borg主観的運動強度: ${evalData.borg_before || '--'} (前) → ${evalData.borg_after || '--'} (後)</div>
       `;
-    } else if (evalId === "stef") {
-      scoreHTML = `<div style="font-weight: 700; color: var(--accent-purple); margin-bottom: 6px;">${evalName} - 左: ${evalData.left_total}点 / 右: ${evalData.right_total}点</div>`;
-      const stefLines = Object.keys(evalData)
-        .filter(k => k !== "left_total" && k !== "right_total")
-        .map(k => {
-          const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
-          const leftTime = evalData[k].time_left !== null ? `${evalData[k].time_left}秒` : "--";
-          const leftScore = evalData[k].score_left !== null ? `${evalData[k].score_left}点` : "--";
-          const rightTime = evalData[k].time_right !== null ? `${evalData[k].time_right}秒` : "--";
-          const rightScore = evalData[k].score_right !== null ? `${evalData[k].score_right}点` : "--";
-          return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 480px; margin-bottom: 1px;">
-            <span>・${itemMeta}</span>
-            <span style="font-family: var(--font-title); font-size:12px;">
-              左: <span style="color:var(--accent-blue);">${leftTime}(${leftScore})</span> / 
-              右: <span style="color:var(--accent-purple);">${rightTime}(${rightScore})</span>
-            </span>
-          </div>`;
-        }).join("");
-      scoreHTML += stefLines;
-    } else if (evalId === "mal") {
-      scoreHTML = `<div style="font-weight: 700; color: var(--accent-green); margin-bottom: 6px;">${evalName} - AOU平均: ${evalData.aou_mean} / QOM平均: ${evalData.qom_mean}</div>`;
-      const malLines = Object.keys(evalData)
-        .filter(k => k !== "aou_mean" && k !== "qom_mean")
-        .map(k => {
-          const actMeta = meta.actions.find(a => a.id === k);
-          const actName = actMeta ? actMeta.name : k;
-          const aouVal = evalData[k].aou !== null ? evalData[k].aou : "--";
-          const qomVal = evalData[k].qom !== null ? evalData[k].qom : "--";
-          return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 480px; margin-bottom: 2px;">
-            <span>・${actName}</span>
-            <span style="font-family: var(--font-title); font-size:12px;">AOU: <span style="color:var(--accent-blue);">${aouVal}</span> | QOM: <span style="color:var(--accent-green);">${qomVal}</span></span>
-          </div>`;
-        }).join("");
-      scoreHTML += malLines;
     } else {
       // 汎用（数値1つのテスト、カスタム項目など）
       const val = evalData.score !== undefined ? evalData.score : (evalData.time || "");
@@ -733,49 +742,321 @@ function showAssessmentSetup(patientIndex) {
   document.getElementById("assessment-step-select").style.display = "block";
   document.getElementById("assessment-step-form").style.display = "none";
   
-  // 評価項目チェックリストの動的生成
-  const listContainer = document.getElementById("assessment-checklist");
-  listContainer.innerHTML = "";
-
-  // プリセット
-  Object.keys(PRESET_EVALUATIONS).forEach(id => {
-    const meta = PRESET_EVALUATIONS[id];
-    createChecklistItem(listContainer, id, meta.name, meta.category);
+  // 領域デフォルト
+  state.currentDomain = "neuron";
+  state.currentEvalSetId = "";
+  
+  // タブの状態初期化
+  document.querySelectorAll(".domain-tab").forEach(tab => {
+    if (tab.getAttribute("data-domain") === "neuron") {
+      tab.classList.add("active");
+      tab.style.borderBottomColor = "var(--accent-blue)";
+    } else {
+      tab.classList.remove("active");
+      tab.style.borderBottomColor = "transparent";
+    }
   });
 
-  // カスタム項目
-  state.customEvaluations.forEach(custom => {
-    createChecklistItem(listContainer, custom.id, custom.name, "カスタム追加");
+  // 評価セットプルダウンの初期化
+  updateEvalSetDropdown();
+
+  // アコーディオンリストの描画
+  renderAssessmentAccordion("neuron");
+}
+
+function renderAssessmentAccordion(domain) {
+  const container = document.getElementById("assessment-accordion-list");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (domain === "custom") {
+    const accordionItem = document.createElement("div");
+    accordionItem.className = "accordion-item active"; // 最初から開く
+    
+    const header = document.createElement("div");
+    header.className = "accordion-header";
+    header.innerHTML = `
+      <span class="accordion-title">カスタム登録項目</span>
+      <div class="accordion-info-group">
+        <span class="accordion-badge" id="badge-custom">0 / ${state.customEvaluations.length}</span>
+      </div>
+    `;
+    
+    const content = document.createElement("div");
+    content.className = "accordion-content";
+    content.style.maxHeight = "500px";
+    
+    const inner = document.createElement("div");
+    inner.className = "accordion-content-inner";
+    inner.style.display = "flex";
+    inner.style.flexDirection = "column";
+    inner.style.gap = "8px";
+    
+    state.customEvaluations.forEach(custom => {
+      createChecklistItem(inner, custom.id, custom.name, "custom", "custom");
+    });
+    
+    if (state.customEvaluations.length === 0) {
+      inner.innerHTML = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding: 10px;">登録されたカスタム項目はありません。「設定」から追加できます。</div>';
+    }
+    
+    content.appendChild(inner);
+    accordionItem.appendChild(header);
+    accordionItem.appendChild(content);
+    container.appendChild(accordionItem);
+    updateAccordionBadge("custom");
+    return;
+  }
+
+  // プリセット領域 (neuron または ortho)
+  const domainMeta = REHAB_DOMAINS[domain];
+  if (!domainMeta) return;
+
+  Object.keys(domainMeta.categories).forEach(catId => {
+    const catName = domainMeta.categories[catId];
+    
+    // このカテゴリーに属する評価項目をフィルタリング
+    const evals = Object.keys(PRESET_EVALUATIONS)
+      .map(k => PRESET_EVALUATIONS[k])
+      .filter(item => item.domain === domain && item.category === catId);
+      
+    if (evals.length === 0 && domain === "ortho") {
+      const accordionItem = document.createElement("div");
+      accordionItem.className = "accordion-item";
+      
+      const header = document.createElement("div");
+      header.className = "accordion-header";
+      header.innerHTML = `
+        <span class="accordion-title">${catName}</span>
+        <div class="accordion-info-group">
+          <span class="accordion-badge">準備中</span>
+          <span class="accordion-arrow">▼</span>
+        </div>
+      `;
+      
+      const content = document.createElement("div");
+      content.className = "accordion-content";
+      const inner = document.createElement("div");
+      inner.className = "accordion-content-inner";
+      inner.innerHTML = `<div style="color:var(--text-muted); font-size:12px; text-align:center; padding: 12px;">※整形外科疾患用の項目（例: VAS, JOAスコア等）は次期フェーズで追加予定です。</div>`;
+      
+      content.appendChild(inner);
+      accordionItem.appendChild(header);
+      accordionItem.appendChild(content);
+      container.appendChild(accordionItem);
+      
+      header.addEventListener("click", () => {
+        const isActive = accordionItem.classList.contains("active");
+        if (isActive) {
+          accordionItem.classList.remove("active");
+        } else {
+          accordionItem.classList.add("active");
+        }
+      });
+      return;
+    }
+
+    const accordionItem = document.createElement("div");
+    accordionItem.className = "accordion-item";
+    
+    const header = document.createElement("div");
+    header.className = "accordion-header";
+    header.innerHTML = `
+      <span class="accordion-title">${catName}</span>
+      <div class="accordion-info-group">
+        <span class="accordion-badge" id="badge-${catId}">0 / ${evals.length}</span>
+        <span class="accordion-arrow">▼</span>
+      </div>
+    `;
+    
+    const content = document.createElement("div");
+    content.className = "accordion-content";
+    const inner = document.createElement("div");
+    inner.className = "accordion-content-inner";
+    inner.style.display = "flex";
+    inner.style.flexDirection = "column";
+    inner.style.gap = "8px";
+    
+    evals.forEach(ev => {
+      createChecklistItem(inner, ev.id, ev.name, domain, catId);
+    });
+    
+    content.appendChild(inner);
+    accordionItem.appendChild(header);
+    accordionItem.appendChild(content);
+    container.appendChild(accordionItem);
+    
+    header.addEventListener("click", () => {
+      const isActive = accordionItem.classList.contains("active");
+      if (isActive) {
+        accordionItem.classList.remove("active");
+      } else {
+        accordionItem.classList.add("active");
+      }
+    });
+
+    updateAccordionBadge(catId);
   });
 }
 
-function createChecklistItem(container, id, name, category) {
+function createChecklistItem(container, id, name, domain, category) {
   const item = document.createElement("label");
   item.className = "checklist-item";
   
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.value = id;
+  checkbox.setAttribute("data-domain", domain);
+  checkbox.setAttribute("data-category", category);
   
+  // すでに選択されている（またはセット選択されている）かの確認
+  if (state.currentEvalSetId) {
+    const activeSet = state.evalSets.find(s => s.id === state.currentEvalSetId);
+    if (activeSet && activeSet.evaluations.includes(id)) {
+      checkbox.checked = true;
+      item.classList.add("checked");
+    }
+  }
+
   checkbox.addEventListener("change", () => {
     if (checkbox.checked) {
       item.classList.add("checked");
     } else {
       item.classList.remove("checked");
     }
+    updateAccordionBadge(category);
   });
 
   item.appendChild(checkbox);
   
   const labelText = document.createElement("span");
-  labelText.innerHTML = `${escapeHtml(name)} <small style="color:var(--text-muted); margin-left: 8px;">[${category}]</small>`;
+  labelText.textContent = name;
   item.appendChild(labelText);
 
   container.appendChild(item);
 }
 
+function updateAccordionBadge(category) {
+  const badge = document.getElementById(`badge-${category}`);
+  if (!badge) return;
+
+  const total = document.querySelectorAll(`input[type="checkbox"][data-category="${category}"]`).length;
+  const checked = document.querySelectorAll(`input[type="checkbox"][data-category="${category}"]:checked`).length;
+
+  badge.textContent = `${checked} / ${total}`;
+  if (checked > 0) {
+    badge.classList.add("checked-active");
+  } else {
+    badge.classList.remove("checked-active");
+  }
+}
+
+function updateEvalSetDropdown() {
+  const select = document.getElementById("eval-set-select");
+  const deleteBtn = document.getElementById("btn-delete-eval-set");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- セットを選択しない --</option>';
+
+  state.evalSets.forEach(set => {
+    const opt = document.createElement("option");
+    opt.value = set.id;
+    opt.textContent = set.name;
+    select.appendChild(opt);
+  });
+
+  if (state.currentEvalSetId) {
+    select.value = state.currentEvalSetId;
+    const isDefault = ["set_acute", "set_convalescent", "set_pusher"].includes(state.currentEvalSetId);
+    if (deleteBtn) deleteBtn.style.display = isDefault ? "none" : "block";
+  } else {
+    select.value = "";
+    if (deleteBtn) deleteBtn.style.display = "none";
+  }
+}
+
+function applyEvalSet(setId) {
+  state.currentEvalSetId = setId;
+  updateEvalSetDropdown();
+
+  if (!setId) {
+    document.querySelectorAll("#assessment-accordion-list input[type='checkbox']").forEach(cb => {
+      cb.checked = false;
+      cb.parentElement.classList.remove("checked");
+    });
+  } else {
+    const set = state.evalSets.find(s => s.id === setId);
+    if (set) {
+      document.querySelectorAll("#assessment-accordion-list input[type='checkbox']").forEach(cb => {
+        cb.checked = false;
+        cb.parentElement.classList.remove("checked");
+      });
+      
+      set.evaluations.forEach(evalId => {
+        const cb = document.querySelector(`#assessment-accordion-list input[type='checkbox'][value='${evalId}']`);
+        if (cb) {
+          cb.checked = true;
+          cb.parentElement.classList.add("checked");
+        }
+      });
+    }
+  }
+
+  const categories = ["neurology", "motor_stroke", "upper_limb", "trunk_balance", "gait_mobility", "adl_cognition", "custom"];
+  categories.forEach(cat => updateAccordionBadge(cat));
+}
+
+function saveCurrentAsEvalSet() {
+  const checkedBoxes = document.querySelectorAll("#assessment-accordion-list input[type='checkbox']:checked");
+  if (checkedBoxes.length === 0) {
+    alert("セットとして保存するには、評価項目を少なくとも1つ選択してください。");
+    return;
+  }
+
+  const name = prompt("作成する評価項目のセット名を入力してください：\n(例：〇〇病院標準セット、腰痛評価セット など)");
+  if (!name || !name.trim()) return;
+
+  const newId = "set_" + Date.now();
+  const selectedList = Array.from(checkedBoxes).map(cb => cb.value);
+
+  const newSet = {
+    id: newId,
+    name: name.trim(),
+    domain: state.currentDomain,
+    evaluations: selectedList
+  };
+
+  state.evalSets.push(newSet);
+  saveEvalSets();
+  state.currentEvalSetId = newId;
+  updateEvalSetDropdown();
+  alert(`評価セット「${name}」を登録しました。`);
+}
+
+function deleteCurrentEvalSet() {
+  if (!state.currentEvalSetId) return;
+  
+  const isDefault = ["set_acute", "set_convalescent", "set_pusher"].includes(state.currentEvalSetId);
+  if (isDefault) {
+    alert("デフォルトの評価セットは削除できません。");
+    return;
+  }
+
+  const setIndex = state.evalSets.findIndex(s => s.id === state.currentEvalSetId);
+  if (setIndex >= 0) {
+    const setName = state.evalSets[setIndex].name;
+    if (confirm(`本当に評価セット「${setName}」を削除しますか？`)) {
+      state.evalSets.splice(setIndex, 1);
+      saveEvalSets();
+      state.currentEvalSetId = "";
+      updateEvalSetDropdown();
+      applyEvalSet("");
+    }
+  }
+}
+
 function startScoring() {
-  const checkedBoxes = document.querySelectorAll("#assessment-checklist input[type='checkbox']:checked");
+  const checkedBoxes = document.querySelectorAll("#assessment-accordion-list input[type='checkbox']:checked");
   if (checkedBoxes.length === 0) {
     alert("評価項目を少なくとも1つ選択してください。");
     return;
@@ -1323,7 +1604,7 @@ function recalculateMultiScaleTotal(evalId, meta) {
   meta.items.forEach(item => {
     const input = document.querySelector(`input[name="${evalId}_${item.id}"]`);
     if (input && input.value !== "") {
-      sum += parseInt(input.value);
+      sum += parseFloat(input.value);
     } else {
       allSelected = false;
     }
@@ -1416,7 +1697,7 @@ function handleAssessmentSubmit(e) {
       if (meta.inputType === "multi_scale") {
         let total = 0;
         meta.items.forEach(item => {
-          const val = parseInt(document.querySelector(`input[name="${evalId}_${item.id}"]`).value);
+          const val = parseFloat(document.querySelector(`input[name="${evalId}_${item.id}"]`).value);
           data[item.id] = val;
           total += val;
         });
@@ -1764,7 +2045,7 @@ function getDemoData() {
       age: 78,
       gender: "男性",
       diagnosis: "脳梗塞（左片麻痺）",
-      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARATを測定。",
+      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARATに加えて、BI、PASS、FIM、NIHSS、MMSE、BLS、SCPを測定。",
       records: [
         {
           date: "2026-06-01",
@@ -1827,6 +2108,39 @@ function getDemoData() {
               gr1: 2, gr2: 1, gr3: 1, gr4: 1,
               p1: 1, p2: 1, p3: 1, p4: 1, p5: 1, p6: 1,
               gm1: 2, gm2: 2, gm3: 2
+            },
+            bi: {
+              total: 45,
+              feeding: 5, bathing: 0, grooming: 0, dressing: 5, bowels: 5, bladder: 5, toilet: 5, transfer: 10, mobility: 10, stairs: 0
+            },
+            pass: {
+              total: 12,
+              posture_sup: 1, posture_sit: 1, posture_stand_unsupport: 0, posture_stand_on_para: 1, posture_stand_on_nonpara: 1,
+              transfer_sup_to_para: 1, transfer_sup_to_nonpara: 1, transfer_sit_to_stand: 1, transfer_stand_to_sit: 1,
+              transfer_sit_to_para: 1, transfer_sit_to_nonpara: 1, transfer_floor: 1
+            },
+            fim: {
+              total: 58,
+              motor_sub: 35,
+              cognitive_sub: 23,
+              m1: 3, m2: 2, m3: 3, m4: 2, m5: 2, m6: 2, m7: 3, m8: 3, m9: 3, m10: 3, m11: 3, m12: 3, m13: 3,
+              c1: 5, c2: 4, c3: 5, c4: 4, c5: 5
+            },
+            nihss: {
+              total: 10,
+              q1a: 0, q1b: 1, q1c: 1, q2: 0, q3: 1, q4: 1, q5a: 2, q5b: 0, q6a: 2, q6b: 0, q7: 0, q8: 1, q9: 1, q10: 0, q11: 0
+            },
+            mmse: {
+              total: 22,
+              q1: 4, q2: 4, q3: 3, q4: 3, q5: 2, q6: 2, q7: 1, q8: 1, q9: 1, q10: 1
+            },
+            bls: {
+              total: 7,
+              q1: 2, q2: 2, q3: 1, q4: 1, q5: 1
+            },
+            scp: {
+              total: 3.5,
+              q1a: 0.75, q1b: 0.75, q2a: 0.5, q2b: 0.5, q3a: 0.5, q3b: 0.5
             }
           }
         },
@@ -1891,6 +2205,39 @@ function getDemoData() {
               gr1: 3, gr2: 2, gr3: 2, gr4: 1,
               p1: 2, p2: 2, p3: 1, p4: 1, p5: 2, p6: 1,
               gm1: 3, gm2: 2, gm3: 2
+            },
+            bi: {
+              total: 70,
+              feeding: 10, bathing: 5, grooming: 5, dressing: 5, bowels: 10, bladder: 10, toilet: 5, transfer: 10, mobility: 10, stairs: 0
+            },
+            pass: {
+              total: 22,
+              posture_sup: 2, posture_sit: 2, posture_stand_unsupport: 1, posture_stand_on_para: 2, posture_stand_on_nonpara: 2,
+              transfer_sup_to_para: 2, transfer_sup_to_nonpara: 2, transfer_sit_to_stand: 2, transfer_stand_to_sit: 2,
+              transfer_sit_to_para: 2, transfer_sit_to_nonpara: 2, transfer_floor: 1
+            },
+            fim: {
+              total: 80,
+              motor_sub: 53,
+              cognitive_sub: 27,
+              m1: 5, m2: 4, m3: 4, m4: 4, m5: 4, m6: 3, m7: 4, m8: 4, m9: 4, m10: 4, m11: 4, m12: 5, m13: 4,
+              c1: 6, c2: 5, c3: 6, c4: 5, c5: 5
+            },
+            nihss: {
+              total: 5,
+              q1a: 0, q1b: 0, q1c: 0, q2: 0, q3: 0, q4: 0, q5a: 1, q5b: 0, q6a: 1, q6b: 0, q7: 0, q8: 1, q9: 1, q10: 1, q11: 0
+            },
+            mmse: {
+              total: 25,
+              q1: 5, q2: 5, q3: 3, q4: 3, q5: 3, q6: 2, q7: 1, q8: 1, q9: 1, q10: 1
+            },
+            bls: {
+              total: 3,
+              q1: 1, q2: 1, q3: 1, q4: 0, q5: 0
+            },
+            scp: {
+              total: 1.5,
+              q1a: 0.25, q1b: 0.25, q2a: 0.25, q2b: 0.25, q3a: 0.25, q3b: 0.25
             }
           }
         },
@@ -1955,6 +2302,39 @@ function getDemoData() {
               gr1: 3, gr2: 3, gr3: 2, gr4: 2,
               p1: 3, p2: 2, p3: 2, p4: 2, p5: 3, p6: 2,
               gm1: 3, gm2: 3, gm3: 3
+            },
+            bi: {
+              total: 90,
+              feeding: 10, bathing: 5, grooming: 5, dressing: 10, bowels: 10, bladder: 10, toilet: 10, transfer: 15, mobility: 15, stairs: 0
+            },
+            pass: {
+              total: 32,
+              posture_sup: 3, posture_sit: 3, posture_stand_unsupport: 3, posture_stand_on_para: 3, posture_stand_on_nonpara: 3,
+              transfer_sup_to_para: 3, transfer_sup_to_nonpara: 3, transfer_sit_to_stand: 3, transfer_stand_to_sit: 3,
+              transfer_sit_to_para: 3, transfer_sit_to_nonpara: 3, transfer_floor: 2
+            },
+            fim: {
+              total: 105,
+              motor_sub: 75,
+              cognitive_sub: 30,
+              m1: 6, m2: 6, m3: 6, m4: 6, m5: 6, m6: 5, m7: 6, m8: 6, m9: 6, m10: 5, m11: 5, m12: 6, m13: 6,
+              c1: 6, c2: 6, c3: 6, c4: 6, c5: 6
+            },
+            nihss: {
+              total: 1,
+              q1a: 0, q1b: 0, q1c: 0, q2: 0, q3: 0, q4: 0, q5a: 0, q5b: 0, q6a: 0, q6b: 0, q7: 0, q8: 0, q9: 0, q10: 1, q11: 0
+            },
+            mmse: {
+              total: 29,
+              q1: 5, q2: 5, q3: 3, q4: 5, q5: 3, q6: 3, q7: 1, q8: 1, q9: 1, q10: 1
+            },
+            bls: {
+              total: 0,
+              q1: 0, q2: 0, q3: 0, q4: 0, q5: 0
+            },
+            scp: {
+              total: 0.0,
+              q1a: 0, q1b: 0, q2a: 0, q2b: 0, q3a: 0, q3b: 0
             }
           }
         }
@@ -1965,7 +2345,7 @@ function getDemoData() {
       age: 65,
       gender: "女性",
       diagnosis: "右大腿骨頚部骨折",
-      memo: "人工骨頭挿入術後。TUG、筋力、6分間歩行を測定。免荷終了し、現在全荷重歩行訓練中。",
+      memo: "人工骨頭挿入術後。TUG、握力、膝伸展筋力、6分間歩行を測定。免荷終了し、現在全荷重歩行訓練中。",
       records: [
         {
           date: "2026-06-20",

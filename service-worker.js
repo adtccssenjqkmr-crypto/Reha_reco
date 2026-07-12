@@ -3,13 +3,14 @@
  * オフライン動作のためのキャッシュ制御
  */
 
-const CACHE_NAME = "rehareco-cache-v3";
+const CACHE_NAME = "rehareco-cache-v4";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./app.css",
   "./app.js",
   "./evaluations.js",
+  "./evaluations_extension.js",
   "./charts.js",
   "./manifest.json",
   "./icon.svg",
