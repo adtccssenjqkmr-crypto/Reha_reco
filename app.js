@@ -906,22 +906,42 @@ function restoreFormData(evalsData) {
 
     if (meta.inputType === "multi_scale" || meta.inputType === "single_select") {
       const itemsList = meta.items || [];
-      itemsList.forEach(item => {
-        // SCIMなどの小計キー(computed)を除外して値を取得
-        const itemVal = data[item.id] !== undefined ? data[item.id] : data.score;
-        if (itemVal === undefined || itemVal === null) return;
-        
+      if (meta.inputType === "single_select") {
+        const itemVal = data.score !== undefined ? data.score : data;
         const section = document.querySelector(`.assessment-section[data-eval-id="${evalId}"]`);
         if (section) {
-          const choice = section.querySelector(`.score-choice[data-item-id="${item.id}"][data-score="${itemVal}"]`);
-          if (choice) {
-            choice.classList.add("selected");
-            const input = section.querySelector(`input[name="${evalId}_${item.id}_score"]`);
-            if (input) input.value = itemVal;
-          }
+          const input = section.querySelector(`input[name="${evalId}_score"]`);
+          if (input) input.value = itemVal;
+          const choices = section.querySelectorAll(".score-choice");
+          choices.forEach(ch => {
+            const numEl = ch.querySelector(".score-num");
+            if (numEl && numEl.textContent.trim() === String(itemVal)) {
+              ch.classList.add("selected");
+            }
+          });
         }
-      });
-      updateSectionTotal(evalId);
+      } else {
+        itemsList.forEach(item => {
+          const itemVal = data[item.id];
+          if (itemVal === undefined || itemVal === null) return;
+          const section = document.querySelector(`.assessment-section[data-eval-id="${evalId}"]`);
+          if (section) {
+            const input = section.querySelector(`input[name="${evalId}_${item.id}"]`);
+            if (input) input.value = itemVal;
+            const scaleItemEl = section.querySelector(`.scale-item[data-item-id="${item.id}"]`);
+            if (scaleItemEl) {
+              const choices = scaleItemEl.querySelectorAll(".score-choice");
+              choices.forEach(ch => {
+                const numEl = ch.querySelector(".score-num");
+                if (numEl && numEl.textContent.trim() === String(itemVal)) {
+                  ch.classList.add("selected");
+                }
+              });
+            }
+          }
+        });
+        recalculateMultiScaleTotal(evalId, meta);
+      }
     }
     else if (meta.inputType === "rom") {
       Object.keys(meta.subItems).forEach(key => {
