@@ -853,13 +853,15 @@ h1, h2, h3, h4, h5, h6 {
 .accordion-item.active .accordion-arrow {
   transform: rotate(180deg);
 }
-.accordion-content {
+.accordion-item .accordion-content {
+  display: block; /* ガイドライン用の display: none を上書き */
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   background-color: var(--bg-card);
 }
 .accordion-item.active .accordion-content {
+  display: block;
   max-height: 500px; /* 十分な大きさを確保 */
   overflow-y: auto;
 }
