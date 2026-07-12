@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="app.css?v=6">
+  <link rel="stylesheet" href="app.css?v=7">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -191,6 +191,7 @@
         
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <button class="btn btn-secondary" id="btn-export">データをエクスポート (JSON)</button>
+          <button class="btn btn-secondary" id="btn-export-csv" style="background-color: #0f766e; border-color: #0f766e;">データをエクスポート (CSV)</button>
           
           <div style="position: relative;">
             <button class="btn btn-secondary" id="btn-import-trigger" style="width: 100%;">データをインポート</button>
@@ -290,10 +291,10 @@
   </script>
 
   <!-- APP Logic Files -->
-  <script src="evaluations.js?v=6"></script>
-  <script src="evaluations_extension.js?v=6"></script>
-  <script src="charts.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="evaluations.js?v=7"></script>
+  <script src="evaluations_extension.js?v=7"></script>
+  <script src="charts.js?v=7"></script>
+  <script src="app.js?v=7"></script>
   <script>
     // PWA Service Worker 登録と自動更新検知
     if ('serviceWorker' in navigator) {

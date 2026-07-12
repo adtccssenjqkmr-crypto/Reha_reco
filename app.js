@@ -304,6 +304,10 @@ function setupEventListeners() {
 
   // データ管理関連
   document.getElementById("btn-export").addEventListener("click", exportData);
+  const exportCsvBtn = document.getElementById("btn-export-csv");
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener("click", exportDataCSV);
+  }
   
   const importTrigger = document.getElementById("btn-import-trigger");
   const fileImport = document.getElementById("file-import");
@@ -2311,6 +2315,85 @@ function exportData() {
   const linkElement = document.createElement('a');
   linkElement.setAttribute('href', dataUri);
   linkElement.setAttribute('download', exportFileDefaultName);
+  linkElement.click();
+}
+
+// CSV データエクスポート
+function exportDataCSV() {
+  if (!state.patients || state.patients.length === 0) {
+    alert("エクスポートするデータがありません。");
+    return;
+  }
+
+  const csvRows = [];
+  // ヘッダー列
+  csvRows.push(['患者ID', '年齢', '性別', '診断名', '測定日', '測定者', '評価ID', '評価項目名', '総合点/代表値', '詳細スコア'].map(v => `"${v}"`).join(','));
+
+  state.patients.forEach(p => {
+    (p.records || []).forEach(r => {
+      Object.keys(r.evaluations || {}).forEach(evalId => {
+        const evalData = r.evaluations[evalId];
+        const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+        const evalName = meta ? meta.name : evalId;
+        
+        let scoreStr = "";
+        let detailStr = "";
+        
+        if (typeof evalData === "object" && evalData !== null) {
+          if (evalData.total !== undefined) {
+            scoreStr = `${evalData.total}点`;
+          } else if (evalData.score !== undefined) {
+            scoreStr = `${evalData.score}`;
+          } else if (evalData.time !== undefined) {
+            scoreStr = `${evalData.time}秒`;
+          } else {
+            scoreStr = "記録あり";
+          }
+          
+          // 内訳テキストの作成
+          const details = [];
+          Object.keys(evalData).forEach(k => {
+            if (k === "total" || k === "score") return;
+            const val = evalData[k];
+            if (typeof val === "object" && val !== null) {
+              details.push(`${k}(左:${val.left}/右:${val.right})`);
+            } else {
+              details.push(`${k}:${val}`);
+            }
+          });
+          detailStr = details.join('; ');
+        } else {
+          scoreStr = String(evalData);
+        }
+        
+        const row = [
+          p.id,
+          p.age || '',
+          p.gender || '',
+          p.diagnosis || '',
+          r.date || '',
+          r.evaluator || '',
+          evalId,
+          evalName,
+          scoreStr,
+          detailStr
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+        
+        csvRows.push(row);
+      });
+    });
+  });
+
+  // UTF-8 BOM (\uFEFF) を付与して Excel での日本語文字化けを防ぐ
+  const csvContent = "\uFEFF" + csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  
+  const linkElement = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  const exportFileDefaultName = `rehareco_export_${new Date().toISOString().split('T')[0]}.csv`;
+  
+  linkElement.setAttribute("href", url);
+  linkElement.setAttribute("download", exportFileDefaultName);
   linkElement.click();
 }
 
