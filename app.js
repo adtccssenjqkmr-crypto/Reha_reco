@@ -87,11 +87,6 @@ function saveEvalSets() {
   localStorage.setItem("rehareco_eval_sets", JSON.stringify(state.evalSets));
 }
 
-// タイマーの状態管理
-let timerInterval = null;
-let timerStart = 0;
-let timerElapsed = 0;
-
 // アプリ初期化時の処理
 document.addEventListener("DOMContentLoaded", () => {
   loadData();
