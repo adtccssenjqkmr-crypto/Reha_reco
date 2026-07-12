@@ -142,7 +142,7 @@ function switchView(viewId, pushToStack = true) {
   });
 
   // 対象者追加ボタン（FAB）の表示制御：一覧画面でのみ表示する
-  const addPatientBtn = document.getElementById("btn-add-patient");
+  const addPatientBtn = document.getElementById("btn-add-patient-fab");
   if (addPatientBtn) {
     if (viewId === "view-patients") {
       addPatientBtn.style.display = "flex";
@@ -723,7 +723,8 @@ function showHistoryDetail(recordIndex) {
         "total", "arm_total", "leg_total", "motor_total", "sensory_total", "static_bal", "dynamic_bal", "coordination",
         "motor_sub", "cognitive_sub", "self_care", "respiration_sphincter", "mobility", "uems", "lems",
         "pain", "rom", "walking", "adl", "pain_walking", "stairs", "rom_limitation", "swelling",
-        "symptoms", "findings", "adl_back"
+        "symptoms", "findings", "adl_back",
+        "chase_left", "chase_right", "nose_left", "nose_right", "rotation_left", "rotation_right", "shin_left", "shin_right"
       ];
       const itemsListHTML = Object.keys(evalData)
         .filter(k => !excludeKeys.includes(k))
@@ -751,6 +752,19 @@ function showHistoryDetail(recordIndex) {
       }
       if (evalId === "joa_back") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(自覚症状: ${evalData.symptoms}点 / 客観的所見: ${evalData.findings}点 / ADL: ${evalData.adl_back}点)</div>`;
+      }
+      if (evalId === "sara") {
+        const c_mean = ((evalData.chase_left || 0) + (evalData.chase_right || 0)) / 2;
+        const n_mean = ((evalData.nose_left || 0) + (evalData.nose_right || 0)) / 2;
+        const r_mean = ((evalData.rotation_left || 0) + (evalData.rotation_right || 0)) / 2;
+        const s_mean = ((evalData.shin_left || 0) + (evalData.shin_right || 0)) / 2;
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px; margin-top: 4px; line-height: 1.5;">
+          <strong>協調運動評価 (左右平均):</strong><br>
+          ・指追跡平均: ${c_mean}点 (左: ${evalData.chase_left || 0} / 右: ${evalData.chase_right || 0})<br>
+          ・指鼻平均: ${n_mean}点 (左: ${evalData.nose_left || 0} / 右: ${evalData.nose_right || 0})<br>
+          ・交互回内回外平均: ${r_mean}点 (左: ${evalData.rotation_left || 0} / 右: ${evalData.rotation_right || 0})<br>
+          ・踵脛平均: ${s_mean}点 (左: ${evalData.shin_left || 0} / 右: ${evalData.shin_right || 0})
+        </div>`;
       }
  
       scoreHTML += itemsListHTML + subTotalsHTML;
@@ -1036,12 +1050,12 @@ function showAssessmentSetup(patientIndex) {
   state.currentPatientIndex = patientIndex;
   state.editingRecordIndex = -1;
   state.selectedEvaluations = [];
-  state.currentDomain = "neuron";
+  state.currentDomain = "general";
   state.currentEvalSetId = "";
   
   // タブの状態初期化
   document.querySelectorAll(".domain-tab").forEach(tab => {
-    if (tab.getAttribute("data-domain") === "neuron") {
+    if (tab.getAttribute("data-domain") === "general") {
       tab.classList.add("active");
       tab.style.borderBottomColor = "var(--accent-blue)";
     } else {
@@ -1054,7 +1068,7 @@ function showAssessmentSetup(patientIndex) {
   updateEvalSetDropdown();
 
   // アコーディオンリストの描画
-  renderAssessmentAccordion("neuron");
+  renderAssessmentAccordion("general");
 }
 
 function renderAssessmentAccordion(domain) {
@@ -2050,6 +2064,12 @@ function handleAssessmentSubmit(e) {
           data.symptoms = data.symptoms || 0;
           data.findings = data.findings || 0;
           data.adl_back = data.adl_back || 0;
+        } else if (evalId === "sara") {
+          const chase_mean = ((data.chase_left || 0) + (data.chase_right || 0)) / 2;
+          const nose_mean = ((data.nose_left || 0) + (data.nose_right || 0)) / 2;
+          const rotation_mean = ((data.rotation_left || 0) + (data.rotation_right || 0)) / 2;
+          const shin_mean = ((data.shin_left || 0) + (data.shin_right || 0)) / 2;
+          data.total = (data.gait || 0) + (data.stance || 0) + (data.sitting || 0) + (data.speech || 0) + chase_mean + nose_mean + rotation_mean + shin_mean;
         }
       } 
       else if (meta.inputType === "rom") {
@@ -2383,7 +2403,7 @@ function getDemoData() {
       age: 78,
       gender: "男性",
       diagnosis: "脳梗塞（左片麻痺）",
-      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARAT、BI、PASS、FIM、NIHSS、MMSE、BLS、SCP、SCIM、AIS、JOA股関節/膝/腰痛を網羅測定。",
+      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARAT、BI、PASS、FIM、NIHSS、MMSE、BLS、SCP、SCIM、AIS、SARA、JOA股関節/膝/腰痛、整形外科テストを網羅測定。",
       records: [
         {
           date: "2026-06-01",
@@ -2494,6 +2514,12 @@ function getDemoData() {
               uems_c5: 4, uems_c6: 4, uems_c7: 4, uems_c8: 4, uems_t1: 4,
               lems_l2: 4, lems_l3: 4, lems_l4: 2, lems_l5: 2, lems_s1: 0
             },
+            sara: {
+              total: 24,
+              gait: 5, stance: 4, sitting: 2, speech: 2,
+              chase_left: 2, chase_right: 3, nose_left: 2, nose_right: 3,
+              rotation_left: 3, rotation_right: 3, shin_left: 3, shin_right: 3
+            },
             joa_hip: {
               total: 45, pain: 15, rom: 10, walking: 10, adl: 10
             },
@@ -2502,7 +2528,11 @@ function getDemoData() {
             },
             joa_back: {
               total: 12, symptoms: 3, findings: 4, adl_back: 5
-            }
+            },
+            slr: 1,
+            fnst: 0,
+            kemp: 1,
+            bragard: 1
           }
         },
         {
@@ -2614,6 +2644,12 @@ function getDemoData() {
               uems_c5: 8, uems_c6: 8, uems_c7: 6, uems_c8: 8, uems_t1: 5,
               lems_l2: 6, lems_l3: 6, lems_l4: 4, lems_l5: 4, lems_s1: 0
             },
+            sara: {
+              total: 14.5,
+              gait: 3, stance: 2, sitting: 1, speech: 1,
+              chase_left: 1, chase_right: 2, nose_left: 1, nose_right: 2,
+              rotation_left: 2, rotation_right: 2, shin_left: 2, shin_right: 3
+            },
             joa_hip: {
               total: 65, pain: 25, rom: 15, walking: 15, adl: 10
             },
@@ -2622,7 +2658,11 @@ function getDemoData() {
             },
             joa_back: {
               total: 20, symptoms: 5, findings: 5, adl_back: 10
-            }
+            },
+            slr: 1,
+            fnst: 0,
+            kemp: 0,
+            bragard: 0
           }
         },
         {
@@ -2734,6 +2774,12 @@ function getDemoData() {
               uems_c5: 10, uems_c6: 10, uems_c7: 8, uems_c8: 10, uems_t1: 8,
               lems_l2: 8, lems_l3: 8, lems_l4: 8, lems_l5: 8, lems_s1: 6
             },
+            sara: {
+              total: 4.5,
+              gait: 1, stance: 1, sitting: 0, speech: 0,
+              chase_left: 0, chase_right: 1, nose_left: 0, nose_right: 1,
+              rotation_left: 1, rotation_right: 1, shin_left: 0, shin_right: 1
+            },
             joa_hip: {
               total: 90, pain: 35, rom: 20, walking: 20, adl: 15
             },
@@ -2742,7 +2788,11 @@ function getDemoData() {
             },
             joa_back: {
               total: 27, symptoms: 7, findings: 6, adl_back: 14
-            }
+            },
+            slr: 0,
+            fnst: 0,
+            kemp: 0,
+            bragard: 0
           }
         }
       ]

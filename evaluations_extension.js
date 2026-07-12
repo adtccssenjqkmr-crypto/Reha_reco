@@ -1681,6 +1681,217 @@ PRESET_EVALUATIONS.pgq_short = {
     }
   ]
 };
+
+
+// -------------------------------------------------------------
+// SARA および腰痛整形外科テストの追加定義 (Phase 4)
+// -------------------------------------------------------------
+PRESET_EVALUATIONS.sara = {
+  id: "sara",
+  name: "SARA（Scale for the Assessment and Rating of Ataxia）",
+  description: "脊髄小脳変性症などの運動失調症の重症度を評価します（歩行、立位、座位、言語、指追跡・指鼻・回内回外・踵脛の左右平均を含め計40点満点）。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "SARA 合計点", unit: "点", computed: true },
+    gait: { name: "1. 歩行", unit: "点" },
+    stance: { name: "2. 立位", unit: "点" },
+    sitting: { name: "3. 座位", unit: "点" },
+    speech: { name: "4. 言語障害", unit: "点" },
+    chase_left: { name: "5. 指追跡試験 (左)", unit: "点" },
+    chase_right: { name: "5. 指追跡試験 (右)", unit: "点" },
+    nose_left: { name: "6. 指鼻試験 (左)", unit: "点" },
+    nose_right: { name: "6. 指鼻試験 (右)", unit: "点" },
+    rotation_left: { name: "7. 交互回内・回外運動 (左)", unit: "点" },
+    rotation_right: { name: "7. 交互回内・回外運動 (右)", unit: "点" },
+    shin_left: { name: "8. 踵脛試験 (左)", unit: "点" },
+    shin_right: { name: "8. 踵脛試験 (右)", unit: "点" }
+  },
+  items: [
+    {
+      id: "gait",
+      name: "1. 歩行 (0〜8点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: わずかに不安定、タンデム歩行（一直線上歩行）困難",
+        2: "2点: 明らかに不安定、支持なしで10m以上歩行可能、時折偏向あり",
+        3: "3点: 中等度に不安定、支持なしで10m歩行可能、強い偏向やよろめきあり",
+        4: "4点: 重度に不安定、支持なしで10m歩行可能だが安全確保のため補助具や監視が必要",
+        5: "5点: 支持なしでの歩行は10m未満",
+        6: "6点: 片側の支持または他者1名の軽介助で10m歩行可能",
+        7: "7点: 歩行器・両側支持または他者1名の強い介助で10m歩行可能",
+        8: "8点: 他者2名以上の介助があっても10m歩行不可"
+      }
+    },
+    {
+      id: "stance",
+      name: "2. 立位 (0〜6点)",
+      criteria: {
+        0: "0点: 正常、両足を閉じて1分間安定して立てる",
+        1: "1点: 両足を閉じて立てるが、動揺あり",
+        2: "2点: 両足を閉じると立てないが、自然立位で動揺なしで1分間立てる",
+        3: "3点: 自然立位で動揺はあるが、支持なしで1分間立てる",
+        4: "4点: 支持なしで立てるが、30秒未満",
+        5: "5点: 片側の支持または軽介助があれば1分間立てる",
+        6: "6点: 介助があっても立てない"
+      }
+    },
+    {
+      id: "sitting",
+      name: "3. 座位 (0〜4点)",
+      criteria: {
+        0: "0点: 正常、支持なしで2分間以上安定して座れる",
+        1: "1点: 支持なしで座れるが、体幹の動揺あり",
+        2: "2点: 支持なしで座れるが、1分間未満",
+        3: "3点: 片手で支持すれば2分間座れる",
+        4: "4点: 支持があっても座れない"
+      }
+    },
+    {
+      id: "speech",
+      name: "4. 言語障害 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: わずかに言語障害があるが、理解は容易",
+        2: "2点: 明らかな言語障害があるが、普通の対話で理解可能",
+        3: "3点: 重度の言語障害があり、時々聞き返しが必要",
+        4: "4点: 理解不能"
+      }
+    },
+    {
+      id: "chase_left",
+      name: "5. 指追跡試験 - 左 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: 軽度の障害（オーバーシュートはあるがスムーズ）",
+        2: "2点: 中等度の障害（不連続な動き、追跡困難）",
+        3: "3点: 重度の障害（著しい不規則運動、標的から逸脱）",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "chase_right",
+      name: "5. 指追跡試験 - 右 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: 軽度の障害（オーバーシュートはあるがスムーズ）",
+        2: "2点: 中等度の障害（不連続な動き、追跡困難）",
+        3: "3点: 重度の障害（著しい不規則運動、標的から逸脱）",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "nose_left",
+      name: "6. 指鼻試験 - 左 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: 軽度（動揺はあるが目標に到達可能）",
+        2: "2点: 中等度（企図振戦または目標近くでの動揺）",
+        3: "3点: 重度（著しい企図振戦、または到達困難）",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "nose_right",
+      name: "6. 指鼻試験 - 右 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: 軽度（動揺はあるが目標に到達可能）",
+        2: "2点: 中等度（企図振戦または目標近くでの動揺）",
+        3: "3点: 重度（著しい企図振戦、または到達困難）",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "rotation_left",
+      name: "7. 交互回内・回外運動 - 左 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: わずかに不規則、または遅い",
+        2: "2点: 明らかに不規則、または非常に遅い、動きが途切れる",
+        3: "3点: 重度に不規則、またはパターンの維持困難",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "rotation_right",
+      name: "7. 交互回内・回外運動 - 右 (0〜4点)",
+      criteria: {
+        0: "0点: 正常",
+        1: "1点: わずかに不規則、または遅い",
+        2: "2点: 明らかに不規則、または非常に遅い、動きが途切れる",
+        3: "3点: 重度に不規則、またはパターンの維持困難",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "shin_left",
+      name: "8. 踵脛試験 - 左 (0〜4点)",
+      criteria: {
+        0: "0点: 正常（踵を対側膝に置き、脛に沿って足首まで滑らせる）",
+        1: "1点: わずかに不規則、脛から外れない",
+        2: "2点: 明らかに不規則、3回未満で脛から外れる",
+        3: "3点: 重度に不規則、脛に沿って動かすことが極めて困難（3回以上外れる）",
+        4: "4点: 遂行不可"
+      }
+    },
+    {
+      id: "shin_right",
+      name: "8. 踵脛試験 - 右 (0〜4点)",
+      criteria: {
+        0: "0点: 正常（踵を対側膝に置き、脛に沿って足首まで滑らせる）",
+        1: "1点: わずかに不規則、脛から外れない",
+        2: "2点: 明らかに不規則、3回未満で脛から外れる",
+        3: "3点: 重度に不規則、脛に沿って動かすことが極めて困難（3回以上外れる）",
+        4: "4点: 遂行不可"
+      }
+    }
+  ]
+};
+
+PRESET_EVALUATIONS.slr = {
+  id: "slr",
+  name: "SLRテスト（下肢伸展挙上テスト）",
+  description: "坐骨神経根の牽引刺激テスト。臥位で下肢を伸展挙上した際の臀部から下肢への放散痛（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  criteria: {
+    "1": "陽性 (+): 臀部から大腿・下腿後面への放散痛誘発あり",
+    "0": "陰性 (-): 誘発痛なし"
+  }
+};
+
+PRESET_EVALUATIONS.fnst = {
+  id: "fnst",
+  name: "FNST（大腿神経伸展テスト）",
+  description: "大腿神経根（L2-L4）の牽引刺激テスト。伏臥位で膝を屈曲し大腿を後方挙上した際の大腿前面への放散痛（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  criteria: {
+    "1": "陽性 (+): 大腿前面への放散痛誘発あり",
+    "0": "陰性 (-): 誘発痛なし"
+  }
+};
+
+PRESET_EVALUATIONS.kemp = {
+  id: "kemp",
+  name: "Kempテスト（ケンプテスト）",
+  description: "腰椎椎間関節や神経根の圧迫刺激テスト。立位または座位で腰椎を後屈・患側へ回旋した際の腰痛・下肢痛誘発（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  criteria: {
+    "1": "陽性 (+): 腰痛または臀部・下肢への放散痛誘発あり",
+    "0": "陰性 (-): 誘発痛なし"
+  }
+};
+
+PRESET_EVALUATIONS.bragard = {
+  id: "bragard",
+  name: "Bragardテスト（ブラガードテスト）",
+  description: "坐骨神経根刺激の補強テスト。SLR陽性角度からわずかに下肢を下げ、足関節を急速に背屈させた際の放散痛誘発（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  criteria: {
+    "1": "陽性 (+): 臀部から下肢への放散痛誘発あり",
+    "0": "陰性 (-): 誘発痛なし"
+  }
+};
+
 const EVAL_METADATA_PATCH = {
   // 脊髄損傷
   scim: { domain: "neuron", category: "spinal_injury" },
@@ -1692,35 +1903,41 @@ const EVAL_METADATA_PATCH = {
   nrs_knee: { domain: "ortho", category: "knee" },
   joa_back: { domain: "ortho", category: "spine" },
   rdq: { domain: "ortho", category: "spine" },
+  slr: { domain: "ortho", category: "spine" },
+  fnst: { domain: "ortho", category: "spine" },
+  kemp: { domain: "ortho", category: "spine" },
+  bragard: { domain: "ortho", category: "spine" },
   sij_tests: { domain: "ortho", category: "pelvis" },
   pgq_short: { domain: "ortho", category: "pelvis" },
 
-  rom: { domain: "neuron", category: "neurology" },
-  knee_extension: { domain: "neuron", category: "neurology" },
-  grip_strength: { domain: "neuron", category: "neurology" },
-  fac: { domain: "neuron", category: "gait_mobility" },
-  walk_10m: { domain: "neuron", category: "gait_mobility" },
-  tug: { domain: "neuron", category: "gait_mobility" },
-  walk_6min: { domain: "neuron", category: "gait_mobility" },
-  bbs: { domain: "neuron", category: "trunk_balance" },
-  brs: { domain: "neuron", category: "neurology" },
+  // 一般項目 (general)
+  rom: { domain: "general", category: "rom" },
+  knee_extension: { domain: "general", category: "strength" },
+  grip_strength: { domain: "general", category: "strength" },
+  walk_10m: { domain: "general", category: "gait" },
+  walk_6min: { domain: "general", category: "gait" },
+  bbs: { domain: "general", category: "balance" },
+  tug: { domain: "general", category: "balance" },
+  bi: { domain: "general", category: "cognition" },
+  fim: { domain: "general", category: "cognition" },
+  mmse: { domain: "general", category: "cognition" },
+  fac: { domain: "general", category: "gait" },
+
+  // 脳卒中・神経系項目 (neuron)
+  brs: { domain: "neuron", category: "motor_stroke" },
   fma: { domain: "neuron", category: "motor_stroke" },
   sias: { domain: "neuron", category: "motor_stroke" },
-  scp: { domain: "neuron", category: "trunk_balance" },
-  mas: { domain: "neuron", category: "neurology" },
-  tis: { domain: "neuron", category: "trunk_balance" },
-  tct: { domain: "neuron", category: "trunk_balance" },
+  scp: { domain: "neuron", category: "motor_stroke" },
+  bls: { domain: "neuron", category: "motor_stroke" },
+  tis: { domain: "neuron", category: "motor_stroke" },
+  tct: { domain: "neuron", category: "motor_stroke" },
+  mas: { domain: "neuron", category: "motor_stroke" },
   stef: { domain: "neuron", category: "upper_limb" },
   mal: { domain: "neuron", category: "upper_limb" },
   arat: { domain: "neuron", category: "upper_limb" },
-  
-  // 新規追加項目
-  bls: { domain: "neuron", category: "trunk_balance" },
-  bi: { domain: "neuron", category: "adl_cognition" },
-  pass: { domain: "neuron", category: "trunk_balance" },
-  fim: { domain: "neuron", category: "adl_cognition" },
   nihss: { domain: "neuron", category: "neurology" },
-  mmse: { domain: "neuron", category: "adl_cognition" }
+  pass: { domain: "neuron", category: "motor_stroke" }, // PASS は脳卒中総合・運動機能へ
+  sara: { domain: "neuron", category: "motor_stroke" }  // SARA の追加
 };
 
 // 全項目に適用
@@ -1731,18 +1948,25 @@ Object.keys(EVAL_METADATA_PATCH).forEach(id => {
   }
 });
 
-// カテゴリーおよび領域のマスタ定義
 const REHAB_DOMAINS = {
+  general: {
+    id: "general",
+    name: "一般項目",
+    categories: {
+      rom: "関節可動域 (ROM)",
+      balance: "基本動作・バランス",
+      gait: "歩行・持久力",
+      strength: "筋力・身体機能",
+      cognition: "ADL・認知機能"
+    }
+  },
   neuron: {
     id: "neuron",
     name: "脳卒中・神経系リハビリ",
     categories: {
-      neurology: "神経学・基本機能",
+      neurology: "神経学・脳機能",
       motor_stroke: "脳卒中総合・運動機能",
       upper_limb: "上肢・手指機能",
-      trunk_balance: "起立・体幹・姿勢バランス",
-      gait_mobility: "歩行・基本動作",
-      adl_cognition: "ADL・認知機能",
       spinal_injury: "脊髄損傷"
     }
   },

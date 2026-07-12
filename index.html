@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="app.css?v=4">
+  <link rel="stylesheet" href="app.css?v=5">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -111,24 +111,23 @@
         </div>
 
         <!-- 領域切り替えタブ -->
-        <div class="domain-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; gap: 8px;">
-          <button type="button" class="domain-tab active" data-domain="neuron" style="flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600; background: none; border: none; border-bottom: 2px solid var(--accent-blue); color: var(--text-primary); cursor: pointer;">脳卒中・神経系</button>
-          <button type="button" class="domain-tab" data-domain="ortho" style="flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer;">整形外科系</button>
-          <button type="button" class="domain-tab" data-domain="custom" style="flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer;">カスタム</button>
+        <div class="domain-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; gap: 4px;">
+          <button type="button" class="domain-tab active" data-domain="general" style="flex: 1; padding: 8px 2px; font-size: 11px; font-weight: 600; background: none; border: none; border-bottom: 2px solid var(--accent-blue); color: var(--text-primary); cursor: pointer; white-space: nowrap;">一般</button>
+          <button type="button" class="domain-tab" data-domain="neuron" style="flex: 1; padding: 8px 2px; font-size: 11px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer; white-space: nowrap;">脳卒中・神経系</button>
+          <button type="button" class="domain-tab" data-domain="ortho" style="flex: 1; padding: 8px 2px; font-size: 11px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer; white-space: nowrap;">整形外科系</button>
+          <button type="button" class="domain-tab" data-domain="custom" style="flex: 1; padding: 8px 2px; font-size: 11px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); cursor: pointer; white-space: nowrap;">カスタム</button>
         </div>
 
         <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 12px;">実施する評価項目を開いてチェックを入れてください。</p>
         
-        <!-- アコーディオンコンテナ -->
-        <div class="accordion-container-scroll" style="max-height: 55vh; overflow-y: auto; padding-right: 4px; margin-bottom: 12px;">
-          <div class="accordion-container" id="assessment-accordion-list">
-            <!-- 階層化チェックリストが動的に生成されます -->
-          </div>
+        <!-- アコーディオンコンテナ (2重スクロールを解消し、画面全体のスクロールに一本化) -->
+        <div class="accordion-container" id="assessment-accordion-list" style="margin-bottom: 90px;">
+          <!-- 階層化チェックリストが動的に生成されます -->
         </div>
 
-        <!-- 下部固定のアクションボタン -->
-        <div class="sticky-action-container" style="background-color: var(--bg-card); border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 8px;">
-          <button class="btn" id="btn-start-scoring" style="width: 100%; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);">採点を開始する</button>
+        <!-- 下部固定のフローティングアクションボタン（白枠を廃止しガラスモーフィズムと強力シャドウ） -->
+        <div class="floating-action-bar">
+          <button class="btn" id="btn-start-scoring" style="width: 100%; max-width: 600px; box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);">採点を開始する</button>
         </div>
       </div>
 
@@ -291,10 +290,10 @@
   </script>
 
   <!-- APP Logic Files -->
-  <script src="evaluations.js?v=4"></script>
-  <script src="evaluations_extension.js?v=4"></script>
-  <script src="charts.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="evaluations.js?v=5"></script>
+  <script src="evaluations_extension.js?v=5"></script>
+  <script src="charts.js?v=5"></script>
+  <script src="app.js?v=5"></script>
   <script>
     // PWA Service Worker 登録と自動更新検知
     if ('serviceWorker' in navigator) {
