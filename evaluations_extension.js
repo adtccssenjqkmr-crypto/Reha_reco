@@ -84,60 +84,69 @@ PRESET_EVALUATIONS.bls = {
   inputType: "multi_scale",
   subItems: {
     total: { name: "BLS 合計点", unit: "点", computed: true },
-    rolling: { name: "1. 仰臥位での転がり", unit: "点" },
-    sitting: { name: "2. 座位保持", unit: "点" },
-    standing: { name: "3. 立位保持", unit: "点" },
-    transfers: { name: "4. 移乗動作", unit: "点" },
-    walking: { name: "5. 歩行動作", unit: "点" }
+    rolling: { name: "1a. 仰臥位での転がり抵抗 (0-3点)", unit: "点" },
+    rolling_both: { name: "1b. 両方向への抵抗あり (追加1点)", unit: "点" },
+    sitting: { name: "2. 座位保持抵抗 (0-3点)", unit: "点" },
+    standing: { name: "3. 立位保持抵抗 (0-4点)", unit: "点" },
+    transfers: { name: "4. 移乗動作抵抗 (0-3点)", unit: "点" },
+    walking: { name: "5. 歩行動作抵抗 (0-3点)", unit: "点" }
   },
   items: [
     {
       id: "rolling",
-      name: "1. 仰臥位での転がり (非麻痺側への寝返りに対する抵抗)",
+      name: "1a. 仰臥位での転がり抵抗 (非麻痺側への寝返りに対する抵抗)",
       criteria: {
-        3: "3点: 重度の抵抗（介助者の努力に強く反発する）",
-        2: "2点: 中等度の抵抗（介助の力に対してある程度抵抗する）",
+        3: "3点: 強度の抵抗（他動的な寝返りに対して強く反発する）",
+        2: "2点: 中等度の抵抗",
         1: "1点: 軽微または一時的な抵抗がある",
         0: "0点: 抵抗がみられない（スムーズに寝返りが行える）"
       }
     },
     {
-      id: "sitting",
-      name: "2. 座位保持 (能動的または受動的な垂直からの傾きへの抵抗)",
+      id: "rolling_both",
+      name: "1b. 両方向への抵抗 (麻痺側・非麻痺側両方の寝返りで抵抗を検知するか)",
       criteria: {
-        3: "3点: 重度の抵抗（常に強く抵抗する）",
-        2: "2点: 中等度の抵抗",
-        1: "1点: 軽微な抵抗",
-        0: "0点: 抵抗なし"
+        1: "1点: 両方向への寝返りで抵抗がみられる",
+        0: "0点: 一方向のみ、または抵抗なし"
+      }
+    },
+    {
+      id: "sitting",
+      name: "2. 座位保持抵抗 (垂直座位への他動的復帰に対する抵抗)",
+      criteria: {
+        3: "3点: 重度の抵抗（垂直から10度以上傾いた時点から抵抗がみられる）",
+        2: "2点: 中等度の抵抗（垂直から5-10度以内で抵抗がみられる）",
+        1: "1点: 軽微な抵抗（垂直まで残り5度未満で抵抗がみられる）",
+        0: "0点: 抵抗なし（他動的な垂直への修正に対して抵抗がない）"
       }
     },
     {
       id: "standing",
-      name: "3. 立位保持 (垂直アライメントへの矯正に対する抵抗)",
+      name: "3. 立位保持抵抗 (垂直への矯正、または健側へ5-10度傾けた際のエフェクト)",
       criteria: {
-        3: "3点: 重度の抵抗",
-        2: "2点: 中等度の抵抗",
-        1: "1点: 軽微な抵抗",
-        0: "0点: 抵抗なし"
+        4: "4点: 重度の抵抗（垂直から10度以上傾いた時点から抵抗がみられる）",
+        3: "3点: 中等度の抵抗（垂直から5-10度で抵抗がみられる）",
+        2: "2点: 軽微な抵抗（垂直まで5度未満で抵抗がみられる）",
+        1: "1点: 正中線から5-10度超えさせようとした時に初めて抵抗がみられる",
+        0: "0点: 抵抗なし（健側脚に好んで荷重する）"
       }
     },
     {
       id: "transfers",
-      name: "4. 移乗動作 (ベッド・車椅子等への移乗時の抵抗)",
+      name: "4. 移乗動作抵抗 (健側・患側への移乗時の抵抗)",
       criteria: {
-        3: "3点: 重度の抵抗（移乗動作を著しく妨げる抵抗）",
-        2: "2点: 中等度の抵抗",
+        3: "3点: 強度の抵抗（移乗動作を著しく妨げ、2人以上の介助が必要）",
+        2: "2点: 中等度の抵抗（移乗可能だが、介助者が1人必要）",
         1: "1点: 軽微な抵抗",
         0: "0点: 抵抗なし"
       }
     },
     {
       id: "walking",
-      name: "5. 歩行動作 (歩行練習時の非麻痺側への傾き・抵抗)",
+      name: "5. 歩行動作抵抗 (歩行時の垂直姿勢へのサポートに対する抵抗)",
       criteria: {
-        4: "4点: 抵抗が非常に強く、歩行練習が実施不可能",
-        3: "3点: 重度の抵抗",
-        2: "2点: 中等度の抵抗",
+        3: "3点: 強度の抵抗（歩行不可、または歩行に2人以上の介助が必要）",
+        2: "2点: 中等度の抵抗（歩行可能だが、抵抗がみられる）",
         1: "1点: 軽微な抵抗",
         0: "0点: 抵抗なし"
       }
@@ -1851,12 +1860,15 @@ PRESET_EVALUATIONS.sara = {
 PRESET_EVALUATIONS.slr = {
   id: "slr",
   name: "SLRテスト（下肢伸展挙上テスト）",
-  description: "坐骨神経根の牽引刺激テスト。臥位で下肢を伸展挙上した際の臀部から下肢への放散痛（陽性/陰性）を評価します。",
+  description: "坐骨神経根の牽引刺激テスト。臥位で下肢を伸展挙上した際の大腿後面から下肢への放散痛（陽性/陰性）を評価します。",
   inputType: "single_select",
-  criteria: {
-    "1": "陽性 (+): 臀部から大腿・下腿後面への放散痛誘発あり",
-    "0": "陰性 (-): 誘発痛なし"
-  }
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "大腿後面〜下肢への放散痛誘発あり" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
 };
 
 PRESET_EVALUATIONS.fnst = {
@@ -1864,21 +1876,27 @@ PRESET_EVALUATIONS.fnst = {
   name: "FNST（大腿神経伸展テスト）",
   description: "大腿神経根（L2-L4）の牽引刺激テスト。伏臥位で膝を屈曲し大腿を後方挙上した際の大腿前面への放散痛（陽性/陰性）を評価します。",
   inputType: "single_select",
-  criteria: {
-    "1": "陽性 (+): 大腿前面への放散痛誘発あり",
-    "0": "陰性 (-): 誘発痛なし"
-  }
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "大腿前面への放散痛誘発あり" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
 };
 
 PRESET_EVALUATIONS.kemp = {
   id: "kemp",
   name: "Kempテスト（ケンプテスト）",
-  description: "腰椎椎間関節や神経根の圧迫刺激テスト。立位または座位で腰椎を後屈・患側へ回旋した際の腰痛・下肢痛誘発（陽性/陰性）を評価します。",
+  description: "腰椎椎間関節や神経根の圧迫刺激テスト。後屈・患側回旋時の腰痛・下肢痛誘発（陽性/陰性）を評価します。",
   inputType: "single_select",
-  criteria: {
-    "1": "陽性 (+): 腰痛または臀部・下肢への放散痛誘発あり",
-    "0": "陰性 (-): 誘発痛なし"
-  }
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "腰痛または臀部・下肢への放散痛誘発あり" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
 };
 
 PRESET_EVALUATIONS.bragard = {
@@ -1886,10 +1904,144 @@ PRESET_EVALUATIONS.bragard = {
   name: "Bragardテスト（ブラガードテスト）",
   description: "坐骨神経根刺激の補強テスト。SLR陽性角度からわずかに下肢を下げ、足関節を急速に背屈させた際の放散痛誘発（陽性/陰性）を評価します。",
   inputType: "single_select",
-  criteria: {
-    "1": "陽性 (+): 臀部から下肢への放散痛誘発あり",
-    "0": "陰性 (-): 誘発痛なし"
-  }
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "大腿後面〜下肢への放散痛誘発・増強あり" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
+};
+
+
+
+// -------------------------------------------------------------
+// 肩関節カテゴリーの追加定義 (Phase 4 追加)
+// -------------------------------------------------------------
+PRESET_EVALUATIONS.joa_shoulder = {
+  id: "joa_shoulder",
+  name: "JOA肩スコア（日本整形外科学会肩関数疾患治療成績判定基準）",
+  description: "肩関節疾患の総合的治療成績を判定します（合計100点満点、点数が高いほど良好）。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "JOA肩 合計点", unit: "点", computed: true },
+    pain: { name: "1. 疼痛 (0-30点)", unit: "点" },
+    rom: { name: "2. 可動域 (0-30点)", unit: "点" },
+    function: { name: "3. 機能 (0-20点)", unit: "点" },
+    support: { name: "4. 支持性 (0-10点)", unit: "点" },
+    xray: { name: "5. X線所見 (0-10点)", unit: "点" }
+  },
+  items: [
+    {
+      id: "pain",
+      name: "1. 疼痛 (0-30点)",
+      criteria: {
+        30: "30点: 疼痛なし",
+        25: "25点: 軽微な疼痛 (運動時のみ)",
+        20: "20点: 時々中等度の疼痛 (疲れ時や特定動作で疼痛あり)",
+        10: "10点: 常に中等度、または時々激しい疼痛",
+        5: "5点: 常に激しい疼痛 (安静時または夜間痛あり)",
+        0: "0点: 極めて激しい持続的疼痛"
+      }
+    },
+    {
+      id: "rom",
+      name: "2. 可動域 (0-30点: 屈曲・外転・回旋などを総合換算)",
+      criteria: {
+        30: "30点: ほぼ正常 (屈曲150度以上、外転150度以上等)",
+        25: "25点: 軽度制限",
+        20: "20点: 中等度制限 (屈曲120-150度、外転120-150度等)",
+        15: "15点: 中等度〜高度制限",
+        10: "10点: 高度制限 (屈曲90度以下、外転90度以下等)",
+        0: "0点: 強直・強度の可動域制限"
+      }
+    },
+    {
+      id: "function",
+      name: "3. 機能 - 日常生活動作 (0-20点: 結髪、結帯、食事、挙上動作等)",
+      criteria: {
+        20: "20点: ADLに全く制限なし",
+        15: "15点: 軽度の困難があるが遂行可能",
+        10: "10点: 中等度の困難、一部動作に他力が必要",
+        5: "5点: 高度の困難、大半のADLが遂行不可",
+        0: "0点: 全く遂行不可"
+      }
+    },
+    {
+      id: "support",
+      name: "4. 支持性 - 肩関節の安定度 (0-10点)",
+      criteria: {
+        10: "10点: 安定 (筋力低下や不安定性なし)",
+        5: "5点: 不安定感・脱力感あり (筋力低下または不全脱臼傾向)",
+        0: "0点: 著しい不安定性 (反復性脱臼または完全な麻痺下垂肩)"
+      }
+    },
+    {
+      id: "xray",
+      name: "5. X線所見 - 関節変形度 (0-10点)",
+      criteria: {
+        10: "10点: 骨・関節に変形なし",
+        5: "5点: 軽度変形 (関節裂隙狭小化や骨棘あり)",
+        0: "0点: 高度変形 (関節面の破壊、脱臼変形など)"
+      }
+    }
+  ]
+};
+
+PRESET_EVALUATIONS.neer_test = {
+  id: "neer_test",
+  name: "Neerインピンジメントテスト",
+  description: "肩峰下インピンジメントの誘発テスト。肩甲骨を固定し、肩関節を内旋させた状態で他動的に最大屈曲させた際の疼痛（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "肩峰下の狭小化によるインピンジメント痛誘発あり" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
+};
+
+PRESET_EVALUATIONS.hawkins_test = {
+  id: "hawkins_test",
+  name: "Hawkins-Kennedyテスト",
+  description: "肩峰下インピンジメントの誘発テスト。肩関節90度屈曲、肘関節90度屈曲位から、急速に内旋させた際の疼痛（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "烏口肩峰アーチ下でのインピンジメント痛誘発あり" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
+};
+
+PRESET_EVALUATIONS.speed_test = {
+  id: "speed_test",
+  name: "Speedテスト（スピードテスト）",
+  description: "上腕二頭筋長頭腱の腱炎誘発テスト。肩関節屈曲・前腕回外位で、検者の抵抗に対して肩を屈曲させた際の上腕二頭筋結節間溝部の疼痛（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "結節間溝部の疼痛誘発あり (上腕二頭筋長頭腱障害)" },
+    { value: 0, label: "陰性 (-)", desc: "疼痛の誘発なし (正常)" }
+  ]
+};
+
+PRESET_EVALUATIONS.empty_can_test = {
+  id: "empty_can_test",
+  name: "Empty Canテスト（ジョブテスト）",
+  description: "棘上筋腱の腱板障害・断裂評価。肩関節90度外転・30度水平屈曲・最大内旋位（親指を下に向ける）で、抵抗に対して外転を保持させた際の脱力・疼痛（陽性/陰性）を評価します。",
+  inputType: "single_select",
+  subItems: {
+    score: { name: "判定", unit: "" }
+  },
+  options: [
+    { value: 1, label: "陽性 (+)", desc: "棘上筋の脱力・抵抗不能、または疼痛あり (腱板障害)" },
+    { value: 0, label: "陰性 (-)", desc: "抵抗保持可能、疼痛なし (正常)" }
+  ]
 };
 
 const EVAL_METADATA_PATCH = {
@@ -1897,6 +2049,7 @@ const EVAL_METADATA_PATCH = {
   scim: { domain: "neuron", category: "spinal_injury" },
   ais: { domain: "neuron", category: "spinal_injury" },
   // 整形外科
+    // 整形外科
   joa_hip: { domain: "ortho", category: "hip" },
   nrs_hip: { domain: "ortho", category: "hip" },
   joa_knee: { domain: "ortho", category: "knee" },
@@ -1909,7 +2062,11 @@ const EVAL_METADATA_PATCH = {
   bragard: { domain: "ortho", category: "spine" },
   sij_tests: { domain: "ortho", category: "pelvis" },
   pgq_short: { domain: "ortho", category: "pelvis" },
-
+  joa_shoulder: { domain: "ortho", category: "shoulder" },
+  neer_test: { domain: "ortho", category: "shoulder" },
+  hawkins_test: { domain: "ortho", category: "shoulder" },
+  speed_test: { domain: "ortho", category: "shoulder" },
+  empty_can_test: { domain: "ortho", category: "shoulder" },
   // 一般項目 (general)
   rom: { domain: "general", category: "rom" },
   knee_extension: { domain: "general", category: "strength" },
@@ -1970,14 +2127,14 @@ const REHAB_DOMAINS = {
       spinal_injury: "脊髄損傷"
     }
   },
-  ortho: {
+    ortho: {
     id: "ortho",
     name: "整形外科系リハビリ",
     categories: {
+      shoulder: "肩関節",
       hip: "股関節",
       knee: "膝関節",
       spine: "胸椎・腰椎",
       pelvis: "骨盤"
     }
-  }
-};
+  }};

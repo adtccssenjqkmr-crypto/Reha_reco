@@ -88,28 +88,9 @@ function saveEvalSets() {
   localStorage.setItem("rehareco_eval_sets", JSON.stringify(state.evalSets));
 }
 
-// アプリ初期化時の処理
-document.addEventListener("DOMContentLoaded", () => {
-  loadData();
-  setupEventListeners();
-  renderPatientsList();
-  renderCustomEvaluationsList();
-  
-  // デフォルトビューを設定
-  switchView("view-patients");
-});
 
-// ローカルストレージからデータをロード
-function loadData() {
-  try {
-    state.patients = JSON.parse(localStorage.getItem("rehareco_patients") || "[]");
-    state.customEvaluations = JSON.parse(localStorage.getItem("rehareco_custom_evaluations") || "[]");
-  } catch (e) {
-    console.error("データの読み込みに失敗しました:", e);
-    state.patients = [];
-    state.customEvaluations = [];
-  }
-}
+
+
 
 // ローカルストレージにデータを保存
 function savePatients() {
@@ -724,8 +705,8 @@ function showHistoryDetail(recordIndex) {
         "motor_sub", "cognitive_sub", "self_care", "respiration_sphincter", "mobility", "uems", "lems",
         "pain", "rom", "walking", "adl", "pain_walking", "stairs", "rom_limitation", "swelling",
         "symptoms", "findings", "adl_back",
-        "chase_left", "chase_right", "nose_left", "nose_right", "rotation_left", "rotation_right", "shin_left", "shin_right"
-      ];
+        "chase_left", "chase_right", "nose_left", "nose_right", "rotation_left", "rotation_right", "shin_left", "shin_right",
+        "pain", "function", "support", "xray", "rolling_both"];
       const itemsListHTML = Object.keys(evalData)
         .filter(k => !excludeKeys.includes(k))
         .map(k => {
@@ -752,6 +733,12 @@ function showHistoryDetail(recordIndex) {
       }
       if (evalId === "joa_back") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(自覚症状: ${evalData.symptoms}点 / 客観的所見: ${evalData.findings}点 / ADL: ${evalData.adl_back}点)</div>`;
+      }
+            if (evalId === "joa_shoulder") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${evalData.pain}点 / 可動域: ${evalData.rom}点 / 機能: ${evalData.function}点 / 支持性: ${evalData.support}点 / X線: ${evalData.xray}点)</div>`;
+      }
+      if (evalId === "bls") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(仰臥位: ${evalData.rolling + evalData.rolling_both}点 / 座位: ${evalData.sitting}点 / 立位: ${evalData.standing}点 / 移乗: ${evalData.transfers}点 / 歩行: ${evalData.walking}点)</div>`;
       }
       if (evalId === "sara") {
         const c_mean = ((evalData.chase_left || 0) + (evalData.chase_right || 0)) / 2;
@@ -1329,8 +1316,8 @@ function applyEvalSet(setId) {
 }
 
 function saveCurrentAsEvalSet() {
-  const checkedBoxes = document.querySelectorAll("#assessment-accordion-list input[type='checkbox']:checked");
-  if (checkedBoxes.length === 0) {
+  // state.selectedEvaluations を用いることで、非アクティブなアコーディオンや他タブのチェック状態も完全に網羅
+  if (!state.selectedEvaluations || state.selectedEvaluations.length === 0) {
     alert("セットとして保存するには、評価項目を少なくとも1つ選択してください。");
     return;
   }
@@ -1339,7 +1326,7 @@ function saveCurrentAsEvalSet() {
   if (!name || !name.trim()) return;
 
   const newId = "set_" + Date.now();
-  const selectedList = Array.from(checkedBoxes).map(cb => cb.value);
+  const selectedList = [...state.selectedEvaluations];
 
   const newSet = {
     id: newId,
@@ -2064,6 +2051,11 @@ function handleAssessmentSubmit(e) {
           data.symptoms = data.symptoms || 0;
           data.findings = data.findings || 0;
           data.adl_back = data.adl_back || 0;
+        } else if (evalId === "bls") {
+          // 仰臥位 + 両方向追加点 + その他項目の単純合計
+          data.total = (data.rolling || 0) + (data.rolling_both || 0) + (data.sitting || 0) + (data.standing || 0) + (data.transfers || 0) + (data.walking || 0);
+        } else if (evalId === "joa_shoulder") {
+          data.total = (data.pain || 0) + (data.rom || 0) + (data.function || 0) + (data.support || 0) + (data.xray || 0);
         } else if (evalId === "sara") {
           const chase_mean = ((data.chase_left || 0) + (data.chase_right || 0)) / 2;
           const nose_mean = ((data.nose_left || 0) + (data.nose_right || 0)) / 2;
@@ -2780,6 +2772,11 @@ function getDemoData() {
               chase_left: 0, chase_right: 1, nose_left: 0, nose_right: 1,
               rotation_left: 1, rotation_right: 1, shin_left: 0, shin_right: 1
             },
+            joa_shoulder: {
+              total: 80, pain: 25, rom: 20, function: 15, support: 10, xray: 10
+            },
+            neer_test: { score: 0 },
+            empty_can_test: { score: 0 },
             joa_hip: {
               total: 90, pain: 35, rom: 20, walking: 20, adl: 15
             },
