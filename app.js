@@ -10,8 +10,82 @@ let state = {
   currentPatientIndex: -1,
   currentRecordIndex: -1,
   currentView: "view-patients",
-  historyStack: [] // シンプルなビュー遷移履歴
+  historyStack: [], // シンプルなビュー遷移履歴
+  currentDomain: "neuron",
+  evalSets: [],
+  currentEvalSetId: ""
 };
+
+// タイマーの状態管理
+let timerInterval = null;
+let timerStart = 0;
+let timerElapsed = 0;
+
+// アプリ初期化時の処理
+document.addEventListener("DOMContentLoaded", () => {
+  loadData();
+  setupEventListeners();
+  renderPatientsList();
+  renderCustomEvaluationsList();
+  
+  // デフォルトビューを設定
+  switchView("view-patients");
+});
+
+// ローカルストレージからデータをロード
+function loadData() {
+  try {
+    state.customEvaluations = JSON.parse(localStorage.getItem("rehareco_custom_evaluations") || "[]");
+    loadEvalSets(); // 評価セットロード
+    
+    const storedPatients = localStorage.getItem("rehareco_patients");
+    if (storedPatients) {
+      state.patients = JSON.parse(storedPatients);
+    } else {
+      // デモデータの自動生成
+      state.patients = getDemoData();
+      savePatients();
+    }
+  } catch (e) {
+    console.error("データの読み込みに失敗しました:", e);
+    state.patients = [];
+    state.customEvaluations = [];
+    state.evalSets = [];
+  }
+}
+
+// ローカルストレージにデータを保存
+function savePatients() {
+  localStorage.setItem("rehareco_patients", JSON.stringify(state.patients));
+}
+
+function saveCustomEvaluations() {
+  localStorage.setItem("rehareco_custom_evaluations", JSON.stringify(state.customEvaluations));
+}
+
+function loadEvalSets() {
+  try {
+    const stored = localStorage.getItem("rehareco_eval_sets");
+    if (stored) {
+      state.evalSets = JSON.parse(stored);
+    } else {
+      // 初期デフォルト評価セット
+      state.evalSets = [
+        { id: "set_acute", name: "脳卒中・急性期基本セット", domain: "neuron", evaluations: ["nihss", "brs", "sias"] },
+        { id: "set_convalescent", name: "脳卒中・回復期総合セット", domain: "neuron", evaluations: ["bbs", "walk_10m", "tug", "fim", "rom"] },
+        { id: "set_pusher", name: "プッシャー症候群評価セット", domain: "neuron", evaluations: ["scp", "bls"] }
+      ];
+      saveEvalSets();
+    }
+  } catch (e) {
+    console.error("評価セットの読み込みに失敗しました:", e);
+    state.evalSets = [];
+  }
+}
+
+function saveEvalSets() {
+  localStorage.setItem("rehareco_eval_sets", JSON.stringify(state.evalSets));
+}
 
 // タイマーの状態管理
 let timerInterval = null;
