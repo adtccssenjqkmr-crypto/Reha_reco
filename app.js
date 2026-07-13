@@ -24,53 +24,47 @@ let timerElapsed = 0;
 
 // アプリ初期化時の処理
 document.addEventListener("DOMContentLoaded", () => {
-  // 臨床データ・カテゴリーの自己修復と動的補正 (フレイル & 意識障害)
-  try {
-    if (typeof REHAB_DOMAINS !== "undefined") {
-      if (!REHAB_DOMAINS.general) {
-        REHAB_DOMAINS.general = { id: "general", name: "一般項目", categories: {} };
-      }
-      if (!REHAB_DOMAINS.general.categories) {
-        REHAB_DOMAINS.general.categories = {};
-      }
-      REHAB_DOMAINS.general.categories.frailty = "フレイル";
-
-      if (REHAB_DOMAINS.neuron) {
-        if (!REHAB_DOMAINS.neuron.categories) {
-          REHAB_DOMAINS.neuron.categories = {};
-        }
-        REHAB_DOMAINS.neuron.categories.consciousness = "意識障害";
-      }
-    }
-    
-    const runtimePatch = {
-      jcs: { domain: "neuron", category: "consciousness" },
-      gcs: { domain: "neuron", category: "consciousness" },
-      nasva: { domain: "neuron", category: "consciousness" },
-      crs_r: { domain: "neuron", category: "consciousness" },
-      j_chs: { domain: "general", category: "frailty" },
-      sppb: { domain: "general", category: "frailty" }
-    };
-
-    if (typeof PRESET_EVALUATIONS !== "undefined") {
-      Object.keys(runtimePatch).forEach(id => {
-        if (PRESET_EVALUATIONS[id]) {
-          PRESET_EVALUATIONS[id].domain = runtimePatch[id].domain;
-          PRESET_EVALUATIONS[id].category = runtimePatch[id].category;
-          console.log(`[Self-Repair] Forced metadata patch for ${id}:`, PRESET_EVALUATIONS[id]);
-        }
-      });
-    }
-  } catch (err) {
-    console.error("[Self-Repair] Dynamic patch failed:", err);
-  }
-
   loadData();
   setupEventListeners();
   renderPatientsList();
   renderCustomEvaluationsList();
   
   // デフォルトビューを設定
+  
+  // 一時的デバッグログの出力
+  try {
+    const consoleEl = document.getElementById("debug-log-console");
+    if (consoleEl) {
+      let logText = "[Debug Info]\n";
+      logText += `REHAB_DOMAINS exists: ${typeof REHAB_DOMAINS !== "undefined"}\n`;
+      if (typeof REHAB_DOMAINS !== "undefined") {
+        logText += `REHAB_DOMAINS.general exists: ${!!REHAB_DOMAINS.general}\n`;
+        if (REHAB_DOMAINS.general) {
+          logText += `REHAB_DOMAINS.general.categories: ${JSON.stringify(REHAB_DOMAINS.general.categories)}\n`;
+        }
+      }
+      
+      logText += `PRESET_EVALUATIONS.j_chs exists: ${typeof PRESET_EVALUATIONS !== "undefined" && !!PRESET_EVALUATIONS.j_chs}\n`;
+      if (typeof PRESET_EVALUATIONS !== "undefined" && PRESET_EVALUATIONS.j_chs) {
+        logText += `j_chs properties: domain=${PRESET_EVALUATIONS.j_chs.domain}, category=${PRESET_EVALUATIONS.j_chs.category}\n`;
+      }
+      
+      logText += `PRESET_EVALUATIONS.sppb exists: ${typeof PRESET_EVALUATIONS !== "undefined" && !!PRESET_EVALUATIONS.sppb}\n`;
+      if (typeof PRESET_EVALUATIONS !== "undefined" && PRESET_EVALUATIONS.sppb) {
+        logText += `sppb properties: domain=${PRESET_EVALUATIONS.sppb.domain}, category=${PRESET_EVALUATIONS.sppb.category}\n`;
+      }
+      
+      logText += `PRESET_EVALUATIONS.joa_shoulder exists: ${typeof PRESET_EVALUATIONS !== "undefined" && !!PRESET_EVALUATIONS.joa_shoulder}\n`;
+      if (typeof PRESET_EVALUATIONS !== "undefined" && PRESET_EVALUATIONS.joa_shoulder) {
+        logText += `joa_shoulder properties: domain=${PRESET_EVALUATIONS.joa_shoulder.domain}, category=${PRESET_EVALUATIONS.joa_shoulder.category}\n`;
+      }
+
+      consoleEl.textContent = logText;
+    }
+  } catch (err) {
+    console.error("Debug console write failed:", err);
+  }
+
   switchView("view-patients");
 });
 
@@ -1205,7 +1199,6 @@ function renderAssessmentAccordion(domain) {
   if (!domainMeta) return;
 
   Object.keys(domainMeta.categories).forEach(catId => {
-    if (catId === "frailty" || catId === "consciousness") return;
     const catName = domainMeta.categories[catId];
     
     // このカテゴリーに属する評価項目をフィルタリング
@@ -1290,111 +1283,6 @@ function renderAssessmentAccordion(domain) {
 
     updateAccordionBadge(catId);
   });
-  // 超強力・一般項目のフレイルカテゴリー直接注入パッチ (domain === "general" の場合)
-  if (domain === "general") {
-    if (!document.getElementById("badge-frailty")) {
-      const evals = [];
-      if (PRESET_EVALUATIONS.j_chs) evals.push(PRESET_EVALUATIONS.j_chs);
-      if (PRESET_EVALUATIONS.sppb) evals.push(PRESET_EVALUATIONS.sppb);
-      
-      if (evals.length > 0) {
-        const accordionItem = document.createElement("div");
-        accordionItem.className = "accordion-item";
-        
-        const header = document.createElement("div");
-        header.className = "accordion-header";
-        header.innerHTML = `
-          <span class="accordion-title">フレイル</span>
-          <div class="accordion-info-group">
-            <span class="accordion-badge" id="badge-frailty">0 / ${evals.length}</span>
-            <span class="accordion-arrow">▼</span>
-          </div>
-        `;
-        
-        const content = document.createElement("div");
-        content.className = "accordion-content";
-        const inner = document.createElement("div");
-        inner.className = "accordion-content-inner";
-        inner.style.display = "flex";
-        inner.style.flexDirection = "column";
-        inner.style.gap = "8px";
-        
-        evals.forEach(ev => {
-          createChecklistItem(inner, ev.id, ev.name, "general", "frailty");
-        });
-        
-        content.appendChild(inner);
-        accordionItem.appendChild(header);
-        accordionItem.appendChild(content);
-        container.appendChild(accordionItem);
-        
-        header.addEventListener("click", () => {
-          const isActive = accordionItem.classList.contains("active");
-          if (isActive) {
-            accordionItem.classList.remove("active");
-          } else {
-            accordionItem.classList.add("active");
-          }
-        });
-        
-        updateAccordionBadge("frailty");
-      }
-    }
-  }
-
-  // 超強力・脳卒中タブの意識障害カテゴリー直接注入パッチ (domain === "neuron" の場合)
-  if (domain === "neuron") {
-    if (!document.getElementById("badge-consciousness")) {
-      const evals = [];
-      if (PRESET_EVALUATIONS.jcs) evals.push(PRESET_EVALUATIONS.jcs);
-      if (PRESET_EVALUATIONS.gcs) evals.push(PRESET_EVALUATIONS.gcs);
-      if (PRESET_EVALUATIONS.nasva) evals.push(PRESET_EVALUATIONS.nasva);
-      if (PRESET_EVALUATIONS.crs_r) evals.push(PRESET_EVALUATIONS.crs_r);
-      
-      if (evals.length > 0) {
-        const accordionItem = document.createElement("div");
-        accordionItem.className = "accordion-item";
-        
-        const header = document.createElement("div");
-        header.className = "accordion-header";
-        header.innerHTML = `
-          <span class="accordion-title">意識障害</span>
-          <div class="accordion-info-group">
-            <span class="accordion-badge" id="badge-consciousness">0 / ${evals.length}</span>
-            <span class="accordion-arrow">▼</span>
-          </div>
-        `;
-        
-        const content = document.createElement("div");
-        content.className = "accordion-content";
-        const inner = document.createElement("div");
-        inner.className = "accordion-content-inner";
-        inner.style.display = "flex";
-        inner.style.flexDirection = "column";
-        inner.style.gap = "8px";
-        
-        evals.forEach(ev => {
-          createChecklistItem(inner, ev.id, ev.name, "neuron", "consciousness");
-        });
-        
-        content.appendChild(inner);
-        accordionItem.appendChild(header);
-        accordionItem.appendChild(content);
-        container.appendChild(accordionItem);
-        
-        header.addEventListener("click", () => {
-          const isActive = accordionItem.classList.contains("active");
-          if (isActive) {
-            accordionItem.classList.remove("active");
-          } else {
-            accordionItem.classList.add("active");
-          }
-        });
-        
-        updateAccordionBadge("consciousness");
-      }
-    }
-  }
 
 }
 
