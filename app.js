@@ -494,60 +494,59 @@ function initChartFilterDropdowns(patient) {
     }
   });
 
-  // 測定したことがある項目、なければプリセットすべてを表示
   const listItems = measuredEvalIds.size > 0 ? Array.from(measuredEvalIds) : Object.keys(PRESET_EVALUATIONS);
 
-  // 1. プリセット項目を領域別・カテゴリー別に分類して optgroup 生成
-  const grouped = {};
-  
-  Object.keys(REHAB_DOMAINS).forEach(dId => {
-    grouped[dId] = {};
-    Object.keys(REHAB_DOMAINS[dId].categories).forEach(cId => {
-      grouped[dId][cId] = [];
-    });
-  });
-  grouped.custom = [];
+  // ドメイン大分類 (general, neuron, ortho, custom) ごとにグループを初期化
+  const grouped = {
+    general: [],
+    neuron: [],
+    ortho: [],
+    custom: []
+  };
 
   listItems.forEach(id => {
     const meta = PRESET_EVALUATIONS[id];
     if (meta) {
       const dId = meta.domain || "neuron";
       const cId = meta.category || "neurology";
-      if (grouped[dId] && grouped[dId][cId]) {
-        grouped[dId][cId].push({ id, name: meta.name });
+      
+      let catName = "";
+      if (REHAB_DOMAINS[dId] && REHAB_DOMAINS[dId].categories && REHAB_DOMAINS[dId].categories[cId]) {
+        catName = REHAB_DOMAINS[dId].categories[cId];
       }
+      
+      const displayName = catName ? `【${catName}】 ${meta.name}` : meta.name;
+      grouped[dId].push({ id, name: displayName });
     } else {
       const custom = state.customEvaluations.find(c => c.id === id);
       if (custom) {
-        grouped.custom.push({ id, name: custom.name });
+        grouped.custom.push({ id, name: `【カスタム】 ${custom.name}` });
       }
     }
   });
 
-  // ドロップダウンに追加
-  Object.keys(REHAB_DOMAINS).forEach(dId => {
+  // ドメイン大分類順に optgroup を追加
+  const domainOrder = ["general", "neuron", "ortho"];
+  domainOrder.forEach(dId => {
     const dMeta = REHAB_DOMAINS[dId];
-    
-    Object.keys(dMeta.categories).forEach(cId => {
-      const cName = dMeta.categories[cId];
-      const items = grouped[dId][cId];
+    if (dMeta && grouped[dId] && grouped[dId].length > 0) {
+      const group = document.createElement("optgroup");
+      group.label = dMeta.name;
       
-      if (items && items.length > 0) {
-        const group = document.createElement("optgroup");
-        group.label = `${dMeta.name} - ${cName}`;
-        
-        items.forEach(item => {
-          const opt = document.createElement("option");
-          opt.value = item.id;
-          opt.textContent = item.name;
-          group.appendChild(opt);
-        });
-        select.appendChild(group);
-      }
-    });
+      // 名前順ソート
+      grouped[dId].sort((a, b) => a.name.localeCompare(b.name));
+      
+      grouped[dId].forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = item.name;
+        group.appendChild(opt);
+      });
+      select.appendChild(group);
+    }
   });
 
-  // カスタム項目を追加
+  // カスタム項目
   if (grouped.custom.length > 0) {
     const group = document.createElement("optgroup");
     group.label = "カスタム追加項目";
@@ -639,7 +638,202 @@ function triggerChartUpdate() {
 
   const patient = state.patients[pIndex];
   updateChart("progressionChart", patient.records, evalId, subItemId);
+  
+  // 評価詳細および評価日選択チップスの描画
+  renderChartEvalDetail(patient, evalId);
 }
+
+function renderChartEvalDetail(patient, evalId, selectedDate = null) {
+  const container = document.getElementById("chart-eval-detail-container");
+  if (!container) return;
+  container.innerHTML = "";
+  container.style.display = "none";
+
+  // この項目が測定されている全レコードを抽出 (古い順から新しい順、時系列順)
+  const targetRecords = patient.records
+    .filter(r => r.evaluations && r.evaluations[evalId] !== undefined)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (targetRecords.length === 0) {
+    return; // 測定記録がなければ表示しない
+  }
+
+  container.style.display = "block";
+
+  // デフォルトの選択日を設定 (指定がなければ最も新しい測定日)
+  if (!selectedDate) {
+    selectedDate = targetRecords[targetRecords.length - 1].date;
+  }
+
+  // 選択されたレコードを特定
+  const activeRecord = targetRecords.find(r => r.date === selectedDate);
+  if (!activeRecord) return;
+
+  const evalData = activeRecord.evaluations[evalId];
+  const meta = PRESET_EVALUATIONS[evalId] || state.customEvaluations.find(c => c.id === evalId);
+  if (!meta) return;
+
+  // 1. パネル全体コンテナの作成
+  const panel = document.createElement("div");
+  panel.className = "eval-detail-panel";
+
+  // 2. ヘッダー部の作成
+  const header = document.createElement("div");
+  header.className = "eval-detail-header";
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "eval-detail-title-row";
+
+  const title = document.createElement("span");
+  title.className = "eval-detail-title";
+  title.textContent = `${meta.name} 内訳詳細`;
+
+  const totalBadge = document.createElement("span");
+  totalBadge.className = "eval-detail-total-badge";
+  
+  let totalScore = "";
+  if (typeof evalData === "object" && evalData.total !== undefined) {
+    totalScore = `${evalData.total} 点`;
+  } else if (typeof evalData === "number") {
+    totalScore = `${evalData} ${meta.unit || "点"}`;
+  } else {
+    totalScore = `${evalData} ${meta.unit || ""}`;
+  }
+  totalBadge.textContent = totalScore;
+
+  titleRow.appendChild(title);
+  titleRow.appendChild(totalBadge);
+  header.appendChild(titleRow);
+
+  // 3. 日付選択チップス (Date Chips) の追加
+  const chipsLabel = document.createElement("div");
+  chipsLabel.className = "eval-date-chips-label";
+  chipsLabel.textContent = "評価日の切り替え";
+  header.appendChild(chipsLabel);
+
+  const chipsContainer = document.createElement("div");
+  chipsContainer.className = "eval-date-chips";
+
+  targetRecords.forEach(r => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `eval-date-chip ${r.date === selectedDate ? "active" : ""}`;
+    chip.textContent = r.date;
+    chip.addEventListener("click", () => {
+      renderChartEvalDetail(patient, evalId, r.date);
+    });
+    chipsContainer.appendChild(chip);
+  });
+  header.appendChild(chipsContainer);
+  panel.appendChild(header);
+
+  // 4. 得点内訳リスト (Grid) の追加
+  const grid = document.createElement("div");
+  grid.className = "eval-detail-grid";
+
+  // 数値のみ、またはカスタム項目の場合
+  if (typeof evalData !== "object") {
+    const item = document.createElement("div");
+    item.className = "eval-detail-item";
+    
+    const itemHeader = document.createElement("div");
+    itemHeader.className = "eval-detail-item-header";
+    
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "eval-detail-item-name";
+    nameSpan.textContent = meta.name;
+    
+    const valSpan = document.createElement("span");
+    valSpan.className = "eval-detail-item-val";
+    valSpan.textContent = `${evalData} ${meta.unit || ""}`;
+    
+    itemHeader.appendChild(nameSpan);
+    itemHeader.appendChild(valSpan);
+    item.appendChild(itemHeader);
+
+    if (meta.description) {
+      const descDiv = document.createElement("div");
+      descDiv.className = "eval-detail-item-desc";
+      descDiv.textContent = meta.description;
+      item.appendChild(descDiv);
+    }
+    grid.appendChild(item);
+  } else {
+    // 複数スケール (multi_scale) または ROM の場合
+    const subItemKeys = Object.keys(meta.subItems || {}).filter(k => k !== "total");
+    
+    if (meta.inputType === "rom") {
+      subItemKeys.forEach(k => {
+        const sideVal = evalData[k];
+        const item = document.createElement("div");
+        item.className = "eval-detail-item";
+
+        const itemHeader = document.createElement("div");
+        itemHeader.className = "eval-detail-item-header";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "eval-detail-item-name";
+        nameSpan.textContent = meta.subItems[k].name;
+
+        const valSpan = document.createElement("span");
+        valSpan.className = "eval-detail-item-val";
+        
+        let leftText = sideVal && sideVal.left !== undefined ? `左: ${sideVal.left}°` : "左: --";
+        let rightText = sideVal && sideVal.right !== undefined ? `右: ${sideVal.right}°` : "右: --";
+        valSpan.textContent = `${leftText} / ${rightText}`;
+
+        itemHeader.appendChild(nameSpan);
+        itemHeader.appendChild(valSpan);
+        item.appendChild(itemHeader);
+        grid.appendChild(item);
+      });
+    } else {
+      const itemsConfig = meta.items || [];
+      
+      subItemKeys.forEach(k => {
+        const val = evalData[k];
+        const itemConfig = itemsConfig.find(x => x.id === k);
+        const subItemConfig = meta.subItems[k];
+
+        const item = document.createElement("div");
+        item.className = "eval-detail-item";
+
+        const itemHeader = document.createElement("div");
+        itemHeader.className = "eval-detail-item-header";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "eval-detail-item-name";
+        nameSpan.textContent = subItemConfig ? subItemConfig.name : k;
+
+        const valSpan = document.createElement("span");
+        valSpan.className = "eval-detail-item-val";
+        valSpan.textContent = val !== undefined ? `${val} 点` : "--";
+
+        itemHeader.appendChild(nameSpan);
+        itemHeader.appendChild(valSpan);
+        item.appendChild(itemHeader);
+
+        let descText = "";
+        if (itemConfig && itemConfig.criteria && val !== undefined) {
+          descText = itemConfig.criteria[val] || "";
+        }
+
+        if (descText) {
+          const descDiv = document.createElement("div");
+          descDiv.className = "eval-detail-item-desc";
+          descDiv.textContent = descText;
+          item.appendChild(descDiv);
+        }
+
+        grid.appendChild(item);
+      });
+    }
+  }
+
+  panel.appendChild(grid);
+  container.appendChild(panel);
+}
+
 
 function renderHistoryList(patient) {
   const container = document.getElementById("history-container");
