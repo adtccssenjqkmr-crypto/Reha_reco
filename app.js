@@ -31,40 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // デフォルトビューを設定
   
-  // 一時的デバッグログの出力
-  try {
-    const consoleEl = document.getElementById("debug-log-console");
-    if (consoleEl) {
-      let logText = "[Debug Info]\n";
-      logText += `REHAB_DOMAINS exists: ${typeof REHAB_DOMAINS !== "undefined"}\n`;
-      if (typeof REHAB_DOMAINS !== "undefined") {
-        logText += `REHAB_DOMAINS.general exists: ${!!REHAB_DOMAINS.general}\n`;
-        if (REHAB_DOMAINS.general) {
-          logText += `REHAB_DOMAINS.general.categories: ${JSON.stringify(REHAB_DOMAINS.general.categories)}\n`;
-        }
-      }
-      
-      logText += `PRESET_EVALUATIONS.j_chs exists: ${typeof PRESET_EVALUATIONS !== "undefined" && !!PRESET_EVALUATIONS.j_chs}\n`;
-      if (typeof PRESET_EVALUATIONS !== "undefined" && PRESET_EVALUATIONS.j_chs) {
-        logText += `j_chs properties: domain=${PRESET_EVALUATIONS.j_chs.domain}, category=${PRESET_EVALUATIONS.j_chs.category}\n`;
-      }
-      
-      logText += `PRESET_EVALUATIONS.sppb exists: ${typeof PRESET_EVALUATIONS !== "undefined" && !!PRESET_EVALUATIONS.sppb}\n`;
-      if (typeof PRESET_EVALUATIONS !== "undefined" && PRESET_EVALUATIONS.sppb) {
-        logText += `sppb properties: domain=${PRESET_EVALUATIONS.sppb.domain}, category=${PRESET_EVALUATIONS.sppb.category}\n`;
-      }
-      
-      logText += `PRESET_EVALUATIONS.joa_shoulder exists: ${typeof PRESET_EVALUATIONS !== "undefined" && !!PRESET_EVALUATIONS.joa_shoulder}\n`;
-      if (typeof PRESET_EVALUATIONS !== "undefined" && PRESET_EVALUATIONS.joa_shoulder) {
-        logText += `joa_shoulder properties: domain=${PRESET_EVALUATIONS.joa_shoulder.domain}, category=${PRESET_EVALUATIONS.joa_shoulder.category}\n`;
-      }
-
-      consoleEl.textContent = logText;
-    }
-  } catch (err) {
-    console.error("Debug console write failed:", err);
-  }
-
   switchView("view-patients");
 });
 
@@ -1290,17 +1256,6 @@ function renderAssessmentAccordion(domain) {
   spacer.style.height = "160px";
   container.appendChild(spacer);
 
-  // デバッグコンソールへのDOM要素数追記
-  try {
-    const consoleEl = document.getElementById("debug-log-console");
-    if (consoleEl) {
-      const items = container.querySelectorAll(".accordion-item");
-      const titles = Array.from(items).map(item => item.querySelector(".accordion-title")?.textContent || "No Title");
-      consoleEl.textContent += `\nAccordion DOM items count: ${items.length} (${titles.join(", ")})`;
-    }
-  } catch (e) {
-    console.error("Debug update failed:", e);
-  }
 }
 
 function createChecklistItem(container, id, name, domain, category) {

@@ -14,12 +14,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="app.css?v=17">
+  <link rel="stylesheet" href="app.css?v=18">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div id="debug-log-console" style="background: #fee2e2; color: #991b1b; padding: 12px; font-size: 12px; font-family: monospace; border-bottom: 2px solid #ef4444; z-index: 9999; display: block; white-space: pre-wrap; line-height: 1.4; max-width: 600px; margin: 0 auto; margin-top: 10px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">[Debug Console] Loading...</div>
+  
 
 
   <!-- App Header -->
@@ -293,13 +293,13 @@
   </script>
 
   <!-- APP Logic Files -->
-  <script src="evaluations.js?v=17"></script>
-  <script src="evaluations_extension.js?v=17"></script>
-  <script src="charts.js?v=17"></script>
-  <script src="app.js?v=17"></script>
+  <script src="evaluations.js?v=18"></script>
+  <script src="evaluations_extension.js?v=18"></script>
+  <script src="charts.js?v=18"></script>
+  <script src="app.js?v=18"></script>
   <script>
-    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v18)
-    const APP_VERSION = "v18";
+    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v19)
+    const APP_VERSION = "v19";
     if (localStorage.getItem("rehareco_app_version") !== APP_VERSION) {
       console.log("New version detected (" + APP_VERSION + "). Purging caches and registrations...");
       if ('serviceWorker' in navigator) {

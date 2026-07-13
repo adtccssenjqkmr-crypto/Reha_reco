@@ -3,7 +3,7 @@
  * オフライン動作のためのキャッシュ制御
  */
 
-const CACHE_NAME = "rehareco-cache-v18";
+const CACHE_NAME = "rehareco-cache-v19";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
