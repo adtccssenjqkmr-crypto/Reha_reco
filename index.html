@@ -296,23 +296,38 @@
   <script src="charts.js?v=11"></script>
   <script src="app.js?v=11"></script>
   <script>
-    // PWA Service Worker 登録と自動更新検知
-    if ('serviceWorker' in navigator) {
+    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v12)
+    const APP_VERSION = "v12";
+    if (localStorage.getItem("rehareco_app_version") !== APP_VERSION) {
+      console.log("New version detected (" + APP_VERSION + "). Purging caches and registrations...");
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      localStorage.setItem("rehareco_app_version", APP_VERSION);
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 300);
+    } else if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js')
           .then(reg => {
             console.log('Service Worker registered successfully.', reg.scope);
-            
-            // 新規アップデートの検出
             reg.onupdatefound = () => {
               const installingWorker = reg.installing;
               installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    // 古いバージョンがアクティブな状態で、新しいSWがインストール完了
-                    console.log('New app version detected. Force refreshing...');
-                    window.location.reload();
-                  }
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  window.location.reload();
                 }
               };
             };
@@ -320,7 +335,6 @@
           .catch(err => console.log('Service Worker registration failed:', err));
       });
 
-      // サービスワーカーが切り替わった瞬間に自動リロード
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
