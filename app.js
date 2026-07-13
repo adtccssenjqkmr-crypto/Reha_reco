@@ -1210,7 +1210,7 @@ function renderAssessmentAccordion(domain) {
     // このカテゴリーに属する評価項目をフィルタリング
     const evals = Object.keys(PRESET_EVALUATIONS)
       .map(k => PRESET_EVALUATIONS[k])
-      .filter(item => item.domain === domain && item.category === catId);
+      .filter(item => item && item.domain === domain && item.category === catId);
       
     if (evals.length === 0 && domain === "ortho") {
       const accordionItem = document.createElement("div");
