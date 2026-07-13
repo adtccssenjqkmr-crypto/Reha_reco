@@ -1289,6 +1289,112 @@ function renderAssessmentAccordion(domain) {
 
     updateAccordionBadge(catId);
   });
+  // 超強力・一般項目のフレイルカテゴリー直接注入パッチ (domain === "general" の場合)
+  if (domain === "general") {
+    if (!document.getElementById("badge-frailty")) {
+      const evals = [];
+      if (PRESET_EVALUATIONS.j_chs) evals.push(PRESET_EVALUATIONS.j_chs);
+      if (PRESET_EVALUATIONS.sppb) evals.push(PRESET_EVALUATIONS.sppb);
+      
+      if (evals.length > 0) {
+        const accordionItem = document.createElement("div");
+        accordionItem.className = "accordion-item";
+        
+        const header = document.createElement("div");
+        header.className = "accordion-header";
+        header.innerHTML = `
+          <span class="accordion-title">フレイル</span>
+          <div class="accordion-info-group">
+            <span class="accordion-badge" id="badge-frailty">0 / ${evals.length}</span>
+            <span class="accordion-arrow">▼</span>
+          </div>
+        `;
+        
+        const content = document.createElement("div");
+        content.className = "accordion-content";
+        const inner = document.createElement("div");
+        inner.className = "accordion-content-inner";
+        inner.style.display = "flex";
+        inner.style.flexDirection = "column";
+        inner.style.gap = "8px";
+        
+        evals.forEach(ev => {
+          createChecklistItem(inner, ev.id, ev.name, "general", "frailty");
+        });
+        
+        content.appendChild(inner);
+        accordionItem.appendChild(header);
+        accordionItem.appendChild(content);
+        container.appendChild(accordionItem);
+        
+        header.addEventListener("click", () => {
+          const isActive = accordionItem.classList.contains("active");
+          if (isActive) {
+            accordionItem.classList.remove("active");
+          } else {
+            accordionItem.classList.add("active");
+          }
+        });
+        
+        updateAccordionBadge("frailty");
+      }
+    }
+  }
+
+  // 超強力・脳卒中タブの意識障害カテゴリー直接注入パッチ (domain === "neuron" の場合)
+  if (domain === "neuron") {
+    if (!document.getElementById("badge-consciousness")) {
+      const evals = [];
+      if (PRESET_EVALUATIONS.jcs) evals.push(PRESET_EVALUATIONS.jcs);
+      if (PRESET_EVALUATIONS.gcs) evals.push(PRESET_EVALUATIONS.gcs);
+      if (PRESET_EVALUATIONS.nasva) evals.push(PRESET_EVALUATIONS.nasva);
+      if (PRESET_EVALUATIONS.crs_r) evals.push(PRESET_EVALUATIONS.crs_r);
+      
+      if (evals.length > 0) {
+        const accordionItem = document.createElement("div");
+        accordionItem.className = "accordion-item";
+        
+        const header = document.createElement("div");
+        header.className = "accordion-header";
+        header.innerHTML = `
+          <span class="accordion-title">意識障害</span>
+          <div class="accordion-info-group">
+            <span class="accordion-badge" id="badge-consciousness">0 / ${evals.length}</span>
+            <span class="accordion-arrow">▼</span>
+          </div>
+        `;
+        
+        const content = document.createElement("div");
+        content.className = "accordion-content";
+        const inner = document.createElement("div");
+        inner.className = "accordion-content-inner";
+        inner.style.display = "flex";
+        inner.style.flexDirection = "column";
+        inner.style.gap = "8px";
+        
+        evals.forEach(ev => {
+          createChecklistItem(inner, ev.id, ev.name, "neuron", "consciousness");
+        });
+        
+        content.appendChild(inner);
+        accordionItem.appendChild(header);
+        accordionItem.appendChild(content);
+        container.appendChild(accordionItem);
+        
+        header.addEventListener("click", () => {
+          const isActive = accordionItem.classList.contains("active");
+          if (isActive) {
+            accordionItem.classList.remove("active");
+          } else {
+            accordionItem.classList.add("active");
+          }
+        });
+        
+        updateAccordionBadge("consciousness");
+      }
+    }
+  }
+
 }
 
 function createChecklistItem(container, id, name, domain, category) {
