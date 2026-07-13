@@ -1205,6 +1205,7 @@ function renderAssessmentAccordion(domain) {
   if (!domainMeta) return;
 
   Object.keys(domainMeta.categories).forEach(catId => {
+    if (catId === "frailty" || catId === "consciousness") return;
     const catName = domainMeta.categories[catId];
     
     // このカテゴリーに属する評価項目をフィルタリング
