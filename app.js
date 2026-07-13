@@ -1284,6 +1284,23 @@ function renderAssessmentAccordion(domain) {
     updateAccordionBadge(catId);
   });
 
+  // 浮遊ボタンに隠れないための十分なスペーサーを追加
+  const spacer = document.createElement("div");
+  spacer.className = "accordion-spacer";
+  spacer.style.height = "160px";
+  container.appendChild(spacer);
+
+  // デバッグコンソールへのDOM要素数追記
+  try {
+    const consoleEl = document.getElementById("debug-log-console");
+    if (consoleEl) {
+      const items = container.querySelectorAll(".accordion-item");
+      const titles = Array.from(items).map(item => item.querySelector(".accordion-title")?.textContent || "No Title");
+      consoleEl.textContent += `\nAccordion DOM items count: ${items.length} (${titles.join(", ")})`;
+    }
+  } catch (e) {
+    console.error("Debug update failed:", e);
+  }
 }
 
 function createChecklistItem(container, id, name, domain, category) {
