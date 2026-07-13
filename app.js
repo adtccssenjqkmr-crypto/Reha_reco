@@ -24,6 +24,47 @@ let timerElapsed = 0;
 
 // アプリ初期化時の処理
 document.addEventListener("DOMContentLoaded", () => {
+  // 臨床データ・カテゴリーの自己修復と動的補正 (フレイル & 意識障害)
+  try {
+    if (typeof REHAB_DOMAINS !== "undefined") {
+      if (!REHAB_DOMAINS.general) {
+        REHAB_DOMAINS.general = { id: "general", name: "一般項目", categories: {} };
+      }
+      if (!REHAB_DOMAINS.general.categories) {
+        REHAB_DOMAINS.general.categories = {};
+      }
+      REHAB_DOMAINS.general.categories.frailty = "フレイル";
+
+      if (REHAB_DOMAINS.neuron) {
+        if (!REHAB_DOMAINS.neuron.categories) {
+          REHAB_DOMAINS.neuron.categories = {};
+        }
+        REHAB_DOMAINS.neuron.categories.consciousness = "意識障害";
+      }
+    }
+    
+    const runtimePatch = {
+      jcs: { domain: "neuron", category: "consciousness" },
+      gcs: { domain: "neuron", category: "consciousness" },
+      nasva: { domain: "neuron", category: "consciousness" },
+      crs_r: { domain: "neuron", category: "consciousness" },
+      j_chs: { domain: "general", category: "frailty" },
+      sppb: { domain: "general", category: "frailty" }
+    };
+
+    if (typeof PRESET_EVALUATIONS !== "undefined") {
+      Object.keys(runtimePatch).forEach(id => {
+        if (PRESET_EVALUATIONS[id]) {
+          PRESET_EVALUATIONS[id].domain = runtimePatch[id].domain;
+          PRESET_EVALUATIONS[id].category = runtimePatch[id].category;
+          console.log(`[Self-Repair] Forced metadata patch for ${id}:`, PRESET_EVALUATIONS[id]);
+        }
+      });
+    }
+  } catch (err) {
+    console.error("[Self-Repair] Dynamic patch failed:", err);
+  }
+
   loadData();
   setupEventListeners();
   renderPatientsList();
