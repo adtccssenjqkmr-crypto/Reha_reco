@@ -710,7 +710,9 @@ function showHistoryDetail(recordIndex) {
         "pain", "rom", "walking", "adl", "pain_walking", "stairs", "rom_limitation", "swelling",
         "symptoms", "findings", "adl_back",
         "chase_left", "chase_right", "nose_left", "nose_right", "rotation_left", "rotation_right", "shin_left", "shin_right",
-        "pain", "function", "support", "xray", "rolling_both"];
+        "pain", "function", "support", "xray", "rolling_both",
+        "eye", "verbal", "motor", "weight_loss", "muscle_weakness", "fatigue", "slowness", "low_activity", "balance", "gait", "chair_stand",
+        "mobility", "feeding", "incontinence", "eye_movement", "comprehension", "speech", "auditory", "visual", "oromotor", "arousal"];
       const itemsListHTML = Object.keys(evalData)
         .filter(k => !excludeKeys.includes(k))
         .map(k => {
@@ -738,7 +740,38 @@ function showHistoryDetail(recordIndex) {
       if (evalId === "joa_back") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(自覚症状: ${evalData.symptoms}点 / 客観的所見: ${evalData.findings}点 / ADL: ${evalData.adl_back}点)</div>`;
       }
-            if (evalId === "joa_shoulder") {
+                        if (evalId === "nasva") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px; line-height:1.4;">
+          移動: ${evalData.mobility}点 / 摂食: ${evalData.feeding}点 / 排泄: ${evalData.incontinence}点 / 眼球運動: ${evalData.eye_movement}点 / 理解: ${evalData.comprehension}点 / 発語: ${evalData.speech}点
+        </div>`;
+      }
+      if (evalId === "crs_r") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px; line-height:1.4;">
+          聴覚: ${evalData.auditory}点 / 視覚: ${evalData.visual}点 / 運動: ${evalData.motor}点 / 口運動: ${evalData.oromotor}点 / コミュ: ${evalData.communication}点 / 覚醒: ${evalData.arousal}点
+        </div>`;
+      }
+      if (evalId === "gcs") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(開眼: E${evalData.eye} / 言語: V${evalData.verbal} / 運動: M${evalData.motor})</div>`;
+      }
+      if (evalId === "j_chs") {
+        let status = "ロバスト (健康)";
+        if (evalData.total >= 3) status = "フレイル (要対策)";
+        else if (evalData.total >= 1) status = "プレフレイル (前段階)";
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px; margin-top:2px;">
+          <strong>フレイル診断: ${status}</strong><br>
+          ・体重減少: ${evalData.weight_loss ? "該当" : "非該当"}<br>
+          ・筋力低下: ${evalData.muscle_weakness ? "該当" : "非該当"}<br>
+          ・疲労感: ${evalData.fatigue ? "該当" : "非該当"}<br>
+          ・歩行速度低下: ${evalData.slowness ? "該当" : "非該当"}<br>
+          ・身体活動低下: ${evalData.low_activity ? "該当" : "非該当"}
+        </div>`;
+      }
+      if (evalId === "sppb") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px; line-height: 1.4;">
+          バランス試験: ${evalData.balance}点 / 歩行速度(4m): ${evalData.gait}点 / 立ち上がり試験: ${evalData.chair_stand}点
+        </div>`;
+      }
+      if (evalId === "joa_shoulder") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${evalData.pain}点 / 可動域: ${evalData.rom}点 / 機能: ${evalData.function}点 / 支持性: ${evalData.support}点 / X線: ${evalData.xray}点)</div>`;
       }
       if (evalId === "bls") {
@@ -2523,6 +2556,12 @@ function getDemoData() {
               ankle_flex: { left: 5, right: 20 },
               ankle_ext: { left: 25, right: 45 }
             },
+            nasva: { total: 4, mobility: 0, feeding: 1, incontinence: 1, eye_movement: 1, comprehension: 1, speech: 0 },
+            crs_r: { total: 3, auditory: 1, visual: 1, motor: 1, oromotor: 0, communication: 0, arousal: 0 },
+            jcs: 10,
+            gcs: { total: 12, eye: 3, verbal: 3, motor: 6 },
+            j_chs: { total: 4, weight_loss: 1, muscle_weakness: 1, fatigue: 1, slowness: 1, low_activity: 0 },
+            sppb: { total: 6, balance: 2, gait: 2, chair_stand: 2 },
             walk_10m: {
               time: 15.2,
               steps: 26,
@@ -2653,6 +2692,12 @@ function getDemoData() {
               ankle_flex: { left: 12, right: 20 },
               ankle_ext: { left: 35, right: 45 }
             },
+            nasva: { total: 12, mobility: 1, feeding: 2, incontinence: 2, eye_movement: 2, comprehension: 3, speech: 2 },
+            crs_r: { total: 10, auditory: 2, visual: 2, motor: 2, oromotor: 1, communication: 1, arousal: 2 },
+            jcs: 2,
+            gcs: { total: 14, eye: 4, verbal: 4, motor: 6 },
+            j_chs: { total: 2, weight_loss: 0, muscle_weakness: 1, fatigue: 0, slowness: 1, low_activity: 0 },
+            sppb: { total: 9, balance: 3, gait: 3, chair_stand: 3 },
             walk_10m: {
               time: 12.0,
               steps: 22,
@@ -2783,6 +2828,12 @@ function getDemoData() {
               ankle_flex: { left: 18, right: 20 },
               ankle_ext: { left: 40, right: 45 }
             },
+            nasva: { total: 22, mobility: 3, feeding: 4, incontinence: 3, eye_movement: 4, comprehension: 4, speech: 4 },
+            crs_r: { total: 19, auditory: 3, visual: 4, motor: 4, oromotor: 2, communication: 2, arousal: 3 },
+            jcs: 0,
+            gcs: { total: 15, eye: 4, verbal: 5, motor: 6 },
+            j_chs: { total: 1, weight_loss: 0, muscle_weakness: 0, fatigue: 0, slowness: 1, low_activity: 0 },
+            sppb: { total: 12, balance: 4, gait: 4, chair_stand: 4 },
             walk_10m: {
               time: 9.5,
               steps: 18,

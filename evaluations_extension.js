@@ -2044,8 +2044,372 @@ PRESET_EVALUATIONS.empty_can_test = {
   ]
 };
 
+
+// -------------------------------------------------------------
+// JCS, GCS, J-CHS基準, SPPB 評価スケールの追加定義 (Phase 5 追加)
+// -------------------------------------------------------------
+PRESET_EVALUATIONS.jcs = {
+  id: "jcs",
+  name: "JCS（Japan Coma Scale: 3-3-9度方式）",
+  description: "わが国で広く使われる意識障害の分類。刺激不要(1桁), 要刺激(2桁), 覚醒不可(3桁)に大別します。",
+  inputType: "single_select",
+  subItems: {
+    score: { name: "判定スコア", unit: "" }
+  },
+  options: [
+    { value: 0, label: "JCS 0: 意識清明", desc: "正常状態" },
+    { value: 1, label: "JCS 1: だいたい清明だが、名前・生年月日が言えない", desc: "I. 刺激しないでも覚醒している状態 (1桁のコード)" },
+    { value: 2, label: "JCS 2: 見当識障害がある (今いる場所や時間が不確か)", desc: "I. 刺激しないでも覚醒している状態 (1桁のコード)" },
+    { value: 3, label: "JCS 3: 自分の名前・生年月日が言えない", desc: "I. 刺激しないでも覚醒している状態 (1桁のコード)" },
+    { value: 10, label: "JCS 10: 普通の呼びかけで容易に開眼する", desc: "II. 刺激すると覚醒する状態 (2桁のコード)" },
+    { value: 20, label: "JCS 20: 大声での呼びかけや揺さぶりで辛うじて開眼する", desc: "II. 刺激すると覚醒する状態 (2桁のコード)" },
+    { value: 30, label: "JCS 30: 痛み刺激を加えつつ呼びかけを繰り返すと辛うじて開眼する", desc: "II. 刺激すると覚醒する状態 (2桁의 コード)" },
+    { value: 100, label: "JCS 100: 痛み刺激に対して払いのけるような動作をする", desc: "III. 刺激しても覚醒しない状態 (3桁のコード)" },
+    { value: 200, label: "JCS 200: 痛み刺激に対して手足を動かしたり顔をしかめる動作をする", desc: "III. 刺激しても覚醒しない状態 (3桁のコード)" },
+    { value: 300, label: "JCS 300: 痛み刺激に対して全く反応しない", desc: "III. 刺激しても覚醒しない状態 (3桁のコード)" }
+  ]
+};
+
+PRESET_EVALUATIONS.gcs = {
+  id: "gcs",
+  name: "GCS（Glasgow Coma Scale）",
+  description: "国際的に意識障害の評価で用いられるスケール。E(1-4), V(1-5), M(1-6)の計3〜15点満点。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "GCS 合計点", unit: "点", computed: true },
+    eye: { name: "E (開眼反応) (1-4点)", unit: "点" },
+    verbal: { name: "V (言語反応) (1-5点)", unit: "点" },
+    motor: { name: "M (運動反応) (1-6点)", unit: "点" }
+  },
+  items: [
+    {
+      id: "eye",
+      name: "E (Eye opening): 開眼反応",
+      criteria: {
+        4: "4点: Spontaneous (自発的に開眼する)",
+        3: "3点: To sound (呼びかけや音声により開眼する)",
+        2: "2点: To pressure (痛み刺激により開眼する)",
+        1: "1点: None (開眼しない)"
+      }
+    },
+    {
+      id: "verbal",
+      name: "V (Verbal response): 言語反応",
+      criteria: {
+        5: "5点: Orientated (見当識あり。会話が適切に成立する)",
+        4: "4点: Confused (混乱した会話。見当識障害あり)",
+        3: "3点: Inappropriate words (不適切な単語のみの発語)",
+        2: "2点: Incomprehensible sounds (理解不能な音声、うめき声等)",
+        1: "1点: None (言語反応なし)"
+      }
+    },
+    {
+      id: "motor",
+      name: "M (Motor response): 運動反応",
+      criteria: {
+        6: "6点: Obeys commands (指示に従って動かせる)",
+        5: "5点: Localising (痛み刺激部位を手で払いのける)",
+        4: "4点: Normal flexion (痛み刺激に対して手足を引き込める)",
+        3: "3点: Abnormal flexion (除皮質硬直、異常な屈曲反応)",
+        2: "2点: Extension (除脳硬直、異常な伸展反応)",
+        1: "1点: None (運動反応なし)"
+      }
+    }
+  ]
+};
+
+PRESET_EVALUATIONS.j_chs = {
+  id: "j_chs",
+  name: "J-CHS基準（改訂日本版フレイル基準）",
+  description: "5つの指標(体重減少、筋力低下、疲労感、歩行速度低下、身体活動量低下)の該当数(0-5点)で判定。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "該当項目数 (0-5点)", unit: "点", computed: true },
+    weight_loss: { name: "1. 体重減少", unit: "点" },
+    muscle_weakness: { name: "2. 筋力低下", unit: "点" },
+    fatigue: { name: "3. 疲労感", unit: "点" },
+    slowness: { name: "4. 歩行速度低下", unit: "点" },
+    low_activity: { name: "5. 身体活動低下", unit: "点" }
+  },
+  items: [
+    {
+      id: "weight_loss",
+      name: "1. 体重減少 (意図しない年間・半年間で2-3kg以上の体重減少)",
+      criteria: {
+        1: "1点: あり (該当する)",
+        0: "0点: なし (該当しない)"
+      }
+    },
+    {
+      id: "muscle_weakness",
+      name: "2. 筋力低下 (握力低下: 男性<28kg, 女性<18kg)",
+      criteria: {
+        1: "1点: あり (該当する)",
+        0: "0点: なし (該当しない)"
+      }
+    },
+    {
+      id: "fatigue",
+      name: "3. 疲労感 (わけもなく疲れたような感じがここ2週間で週3-4日以上ある)",
+      criteria: {
+        1: "1点: あり (該当する)",
+        0: "0点: なし (該当しない)"
+      }
+    },
+    {
+      id: "slowness",
+      name: "4. 歩行速度低下 (通常歩行速度 < 1.0 m/s)",
+      criteria: {
+        1: "1点: あり (該当する)",
+        0: "0点: なし (該当しない)"
+      }
+    },
+    {
+      id: "low_activity",
+      name: "5. 身体活動低下 (週に1回も軽い運動・体操・定期的な運動をしていない)",
+      criteria: {
+        1: "1点: あり (該当する)",
+        0: "0点: なし (該当しない)"
+      }
+    }
+  ]
+};
+
+PRESET_EVALUATIONS.sppb = {
+  id: "sppb",
+  name: "SPPB（Short Physical Performance Battery）",
+  description: "下肢身体機能、フレイル、サルコペニア評価の国際基準。バランス、歩行、立ち上がりの合計12点満点。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "SPPB 合計点", unit: "点", computed: true },
+    balance: { name: "1. バランス試験 (0-4点)", unit: "点" },
+    gait: { name: "2. 歩行速度 (4m) (0-4点)", unit: "点" },
+    chair_stand: { name: "3. 5回立ち上がり試験 (0-4点)", unit: "点" }
+  },
+  items: [
+    {
+      id: "balance",
+      name: "1. バランス試験 (閉脚立位・半タンデム立位・タンデム立位)",
+      criteria: {
+        4: "4点: タンデム立位を10秒間保持可能",
+        3: "3点: タンデム立位を3-9.99秒間保持可能 (半タンデム10秒可)",
+        2: "2点: 半タンデム立位を10秒間保持可能 (タンデムは3秒未満)",
+        1: "1点: 閉脚立位を10秒間保持可能 (半タンデムは10秒未満)",
+        0: "0点: 閉脚立位を10秒間保持不能、または検査未実施"
+      }
+    },
+    {
+      id: "gait",
+      name: "2. 通常歩行速度 (4m歩行時間によるスコア化)",
+      criteria: {
+        4: "4点: 4.82秒未満 (< 0.83 m/s 超過相当)",
+        3: "3点: 4.82秒以上 6.20秒未満",
+        2: "2点: 6.20秒以上 8.70秒未満",
+        1: "1点: 8.70秒以上 (> 8.70秒)",
+        0: "0点: 歩行不能、または検査未実施"
+      }
+    },
+    {
+      id: "chair_stand",
+      name: "3. 立ち上がり試験 (椅子からの5回立ち上がり時間によるスコア化)",
+      criteria: {
+        4: "4点: 11.19秒以下",
+        3: "3点: 11.20秒以上 13.69秒以下",
+        2: "2点: 13.70秒以上 16.69秒以下",
+        1: "1点: 16.70秒以上 60.00秒以下",
+        0: "0点: 60秒超え、遂行不能、または検査未実施"
+      }
+    }
+  ]
+};
+
+
+
+// -------------------------------------------------------------
+// NASVAスコア, CRS-R 評価スケールの追加定義 (Phase 5 意識障害追加)
+// -------------------------------------------------------------
+PRESET_EVALUATIONS.nasva = {
+  id: "nasva",
+  name: "NASVA遷延性意識障害スコア",
+  description: "遷延性意識障害（いわゆる植物状態）の重症度および回復経過を測定します（各0-5点、計30点満点）。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "NASVA 合計点", unit: "点", computed: true },
+    mobility: { name: "1. 自力移動 (0-5点)", unit: "点" },
+    feeding: { name: "2. 自力摂食 (0-5点)", unit: "点" },
+    incontinence: { name: "3. 尿便失禁 (0-5点)", unit: "点" },
+    eye_movement: { name: "4. 眼神視・追視 (0-5点)", unit: "点" },
+    comprehension: { name: "5. 音声理解・命令従動 (0-5点)", unit: "点" },
+    speech: { name: "6. 発語・有意味音声 (0-5点)", unit: "点" }
+  },
+  items: [
+    {
+      id: "mobility",
+      name: "1. 自力移動 (移動動作の自立度)",
+      criteria: {
+        5: "5点: 完全に自立して移動可能",
+        4: "4点: 軽度介助または車椅子自立",
+        3: "3点: 起立・移乗に介助を要する",
+        2: "2点: 座位保持可能だが移動不可",
+        1: "1点: 自力で寝返りは可能だが座位は不可",
+        0: "0点: 寝返りも不可能 (完全寝たきり)"
+      }
+    },
+    {
+      id: "feeding",
+      name: "2. 自力摂食 (経口摂取の能力)",
+      criteria: {
+        5: "5点: 自力で完全に食事が摂れる",
+        4: "4点: スプーン等で一部自力摂取可能",
+        3: "3点: 介助は必要だが、咀嚼は可能",
+        2: "2点: 経口摂取可能だが、全介助が必要",
+        1: "1点: 経口摂取不可 (経鼻栄養や胃瘻等の経管栄養管理)",
+        0: "0点: 嚥下反射がなく、点滴等での栄養管理のみ"
+      }
+    },
+    {
+      id: "incontinence",
+      name: "3. 尿便失禁 (排泄のコントロール度)",
+      criteria: {
+        5: "5点: 自立して排泄可能 (失禁なし)",
+        4: "4点: 軽度の失禁、または排泄誘導で自立",
+        3: "3点: 介助は必要だが、失禁はほとんどない",
+        2: "2点: 失禁が恒常的だが、バルーンカテーテル等で管理",
+        1: "1点: オムツ対応であり、尿便失禁が恒常的",
+        0: "0点: 全く自制できず、失禁状態が深刻"
+      }
+    },
+    {
+      id: "eye_movement",
+      name: "4. 眼神視・追視 (眼球運動と視線固定)",
+      criteria: {
+        5: "5点: 正常な追視・視線固定が可能",
+        4: "4点: 親しい人の顔や大きな物を追視する",
+        3: "3点: 光や一時的な動く物を視線で追う",
+        2: "2点: 自発開眼しているが、追視はしない (視線固定困難)",
+        1: "1点: 刺激によりわずかに開眼するが注視はしない",
+        0: "0点: 開眼せず、眼球運動が全く見られない"
+      }
+    },
+    {
+      id: "comprehension",
+      name: "5. 音声理解・命令従動 (指示に対する理解反応)",
+      criteria: {
+        5: "5点: 複雑な指示や会話を理解し従う",
+        4: "4点: 単純な命令 (手を握る、目を閉じる等) に確実に応じる",
+        3: "3点: 命令に対して不確実だが何らかの反応を示す",
+        2: "2点: 命令には従わないが、大声に対して顔をしかめる等の嫌悪反応がある",
+        1: "1点: 音刺激に対する反射的な驚愕反応のみ",
+        0: "0点: 音声刺激に対して全く反応しない"
+      }
+    },
+    {
+      id: "speech",
+      name: "6. 発語・有意味音声 (発声と意思疎通)",
+      criteria: {
+        5: "5点: 流暢な発話・会話が可能",
+        4: "4点: 単語や短い有意味文で意思疎通ができる",
+        3: "3点: 有意味な単語をいくつか発声するが、会話は困難",
+        2: "2点: 有意味ではないが自発的に声を出す (うめき声、単音の発声)",
+        1: "1点: 刺激によってのみわずかに発声する",
+        0: "0点: 全く無言、発声不可能"
+      }
+    }
+  ]
+};
+
+PRESET_EVALUATIONS.crs_r = {
+  id: "crs_r",
+  name: "CRS-R（Coma Recovery Scale-Revised）",
+  description: "微細な意識障害・昏睡からの回復プロセスを客観的に評価するスケール。計23点満点。",
+  inputType: "multi_scale",
+  subItems: {
+    total: { name: "CRS-R 合計点", unit: "点", computed: true },
+    auditory: { name: "1. 聴覚機能 (0-4点)", unit: "点" },
+    visual: { name: "2. 視覚機能 (0-5点)", unit: "点" },
+    motor: { name: "3. 運動機能 (0-6点)", unit: "点" },
+    oromotor: { name: "4. 口運動・言語 (0-3点)", unit: "点" },
+    communication: { name: "5. コミュニケーション (0-2点)", unit: "点" },
+    arousal: { name: "6. 覚醒度 (0-3点)", unit: "点" }
+  },
+  items: [
+    {
+      id: "auditory",
+      name: "1. 聴覚機能 (Auditory Function Subscale)",
+      criteria: {
+        4: "4点: 一貫した命令従動 (Consistent Movement to Command)",
+        3: "3点: 再現性のある命令従動 (Reproducible Movement to Command)",
+        2: "2点: 音に対する定位反応 (Localization to Sound)",
+        1: "1点: 驚愕反射 (Auditory Startle)",
+        0: "0点: 反応なし (None)"
+      }
+    },
+    {
+      id: "visual",
+      name: "2. 視覚機能 (Visual Function Subscale)",
+      criteria: {
+        5: "5点: 対象物の能動的使用 (Object Recognition)",
+        4: "4点: 注視固定 (Fixation)",
+        3: "3点: 物体追視 (Visual Pursuit)",
+        2: "2点: 脅迫反射による瞬目 (Blink to Visual Threat)",
+        1: "1点: 視覚的驚愕反応 (Visual Startle)",
+        0: "0点: 反応なし (None)"
+      }
+    },
+    {
+      id: "motor",
+      name: "3. 運動機能 (Motor Function Subscale)",
+      criteria: {
+        6: "6点: 対象物の能動的使用 (Functional Object Use)",
+        5: "5点: 侵害刺激に対する自動的・適応的運動反応 (Automatic Motor Response)",
+        4: "4点: 侵害刺激に対する定位反応 (Localization to Noxious Stimulus)",
+        3: "3点: 屈曲回避反応 (Flexion Withdrawal)",
+        2: "2点: 異常除皮質/除脳屈曲伸展反応 (Abnormal Posturing)",
+        1: "1点: 姿勢反射/驚愕反応 (Postural Response/Myoclonus)",
+        0: "0点: 反応なし (None)"
+      }
+    },
+    {
+      id: "oromotor",
+      name: "4. 口・運動・コミュニケーション機能 (Oromotor/Verbal Function Subscale)",
+      criteria: {
+        3: "3点: 明瞭な発語/発話 (Intelligible Verbalization)",
+        2: "2点: 音声の発生 (Vocalization)",
+        1: "1点: 反射運動/口唇探索反射 (Oral Reflexive/Jaw Jerk)",
+        0: "0点: 反応なし (None)"
+      }
+    },
+    {
+      id: "communication",
+      name: "5. コミュニケーション機能 (Communication Subscale)",
+      criteria: {
+        2: "2点: 機能的・一貫性のある回答 (Functional: Accurate)",
+        1: "1点: 非機能的・意図的な回答 (Intentional: Non-functional)",
+        0: "0点: なし (None)"
+      }
+    },
+    {
+      id: "arousal",
+      name: "6. 覚醒度 (Arousal Subscale)",
+      criteria: {
+        3: "3点: 注意の喚起・持続可能 (Attention)",
+        2: "2点: 眼球運動を伴う覚醒保持可能 (Eye Opening without Stimulation)",
+        1: "1点: 刺激により開眼するが持続困難 (Eye Opening with Stimulation)",
+        0: "0点: 刺激しても開眼しない (Unarousable)"
+      }
+    }
+  ]
+};
+
+
 const EVAL_METADATA_PATCH = {
   // 脊髄損傷
+      nasva: { domain: "neuron", category: "consciousness" },
+  crs_r: { domain: "neuron", category: "consciousness" },
+  jcs: { domain: "neuron", category: "consciousness" },
+  gcs: { domain: "neuron", category: "consciousness" },
+  j_chs: { domain: "general", category: "frailty" },
+  sppb: { domain: "general", category: "frailty" },
   scim: { domain: "neuron", category: "spinal_injury" },
   ais: { domain: "neuron", category: "spinal_injury" },
   // 整形外科
@@ -2114,7 +2478,8 @@ const REHAB_DOMAINS = {
       balance: "基本動作・バランス",
       gait: "歩行・持久力",
       strength: "筋力・身体機能",
-      cognition: "ADL・認知機能"
+      cognition: "ADL・認知機能",
+      frailty: "フレイル"
     }
   },
   neuron: {
@@ -2122,6 +2487,7 @@ const REHAB_DOMAINS = {
     name: "脳卒中・神経系リハビリ",
     categories: {
       neurology: "神経学・脳機能",
+      consciousness: "意識障害",
       motor_stroke: "脳卒中総合・運動機能",
       upper_limb: "上肢・手指機能",
       spinal_injury: "脊髄損傷"
