@@ -1030,9 +1030,16 @@ function showHistoryDetail(recordIndex) {
         <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・スコア: MAS ${evalData.score}</div>
       `;
     } else if (evalId === "walk_6min") {
+      const hrBefore = evalData.hr_before !== null && evalData.hr_before !== undefined ? `${evalData.hr_before} bpm` : '--';
+      const hrAfter = evalData.hr_after !== null && evalData.hr_after !== undefined ? `${evalData.hr_after} bpm` : '--';
+      const spo2Before = evalData.spo2_before !== null && evalData.spo2_before !== undefined ? `${evalData.spo2_before} %` : '--';
+      const spo2After = evalData.spo2_after !== null && evalData.spo2_after !== undefined ? `${evalData.spo2_after} %` : '--';
+      
       scoreHTML = `
         <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${evalName}</div>
         <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・歩行距離: ${evalData.distance} m</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・脈拍数: ${hrBefore} (前) → ${hrAfter} (後)</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・SpO2: ${spo2Before} (前) → ${spo2After} (後)</div>
         <div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px;">・Borg主観的運動強度: ${evalData.borg_before || '--'} (前) → ${evalData.borg_after || '--'} (後)</div>
       `;
     } else {
@@ -1212,9 +1219,18 @@ function restoreFormData(evalsData) {
       const distInput = document.querySelector(`input[name="${evalId}_distance"]`);
       const beforeSelect = document.querySelector(`select[name="${evalId}_borg_before"]`);
       const afterSelect = document.querySelector(`select[name="${evalId}_borg_after"]`);
+      const hrBeforeInput = document.querySelector(`input[name="${evalId}_hr_before"]`);
+      const spo2BeforeInput = document.querySelector(`input[name="${evalId}_spo2_before"]`);
+      const hrAfterInput = document.querySelector(`input[name="${evalId}_hr_after"]`);
+      const spo2AfterInput = document.querySelector(`input[name="${evalId}_spo2_after"]`);
+      
       if (distInput && data.distance !== null) distInput.value = data.distance;
       if (beforeSelect && data.borg_before !== null) beforeSelect.value = data.borg_before;
       if (afterSelect && data.borg_after !== null) afterSelect.value = data.borg_after;
+      if (hrBeforeInput && data.hr_before !== null && data.hr_before !== undefined) hrBeforeInput.value = data.hr_before;
+      if (spo2BeforeInput && data.spo2_before !== null && data.spo2_before !== undefined) spo2BeforeInput.value = data.spo2_before;
+      if (hrAfterInput && data.hr_after !== null && data.hr_after !== undefined) hrAfterInput.value = data.hr_after;
+      if (spo2AfterInput && data.spo2_after !== null && data.spo2_after !== undefined) spo2AfterInput.value = data.spo2_after;
     }
     else if (meta.inputType === "brs_custom") {
       const armSelect = document.querySelector(`select[name="${evalId}_arm"]`);
@@ -1886,6 +1902,29 @@ function buildInputFormUI(section, evalId, meta) {
         <label>歩行距離 (メートル)</label>
         <input type="number" name="${evalId}_distance" class="form-control" placeholder="m" required>
       </div>
+      
+      <div class="walk-10m-grid">
+        <div class="form-group">
+          <label>開始前 脈拍数</label>
+          <input type="number" name="${evalId}_hr_before" class="form-control" placeholder="bpm">
+        </div>
+        <div class="form-group">
+          <label>終了後 脈拍数</label>
+          <input type="number" name="${evalId}_hr_after" class="form-control" placeholder="bpm">
+        </div>
+      </div>
+
+      <div class="walk-10m-grid">
+        <div class="form-group">
+          <label>開始前 SpO2</label>
+          <input type="number" name="${evalId}_spo2_before" class="form-control" placeholder="%" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>終了後 SpO2</label>
+          <input type="number" name="${evalId}_spo2_after" class="form-control" placeholder="%" min="0" max="100">
+        </div>
+      </div>
+
       <div class="walk-10m-grid">
         <div class="form-group">
           <label>開始前 Borg指数</label>
@@ -2362,6 +2401,16 @@ function handleAssessmentSubmit(e) {
         data.distance = parseInt(document.querySelector(`input[name="${evalId}_distance"]`).value);
         data.borg_before = parseInt(document.querySelector(`select[name="${evalId}_borg_before"]`).value);
         data.borg_after = parseInt(document.querySelector(`select[name="${evalId}_borg_after"]`).value);
+        
+        const hrBefore = document.querySelector(`input[name="${evalId}_hr_before"]`).value;
+        const spo2Before = document.querySelector(`input[name="${evalId}_spo2_before"]`).value;
+        const hrAfter = document.querySelector(`input[name="${evalId}_hr_after"]`).value;
+        const spo2After = document.querySelector(`input[name="${evalId}_spo2_after"]`).value;
+        
+        data.hr_before = hrBefore ? parseInt(hrBefore) : null;
+        data.spo2_before = spo2Before ? parseInt(spo2Before) : null;
+        data.hr_after = hrAfter ? parseInt(hrAfter) : null;
+        data.spo2_after = spo2After ? parseInt(spo2After) : null;
       }
       else if (meta.inputType === "single_select") {
         data.score = parseInt(document.querySelector(`input[name="${evalId}_score"]`).value);

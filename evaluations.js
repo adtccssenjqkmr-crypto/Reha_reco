@@ -100,6 +100,10 @@ const PRESET_EVALUATIONS = {
     inputType: "walk_6min_custom",
     subItems: {
       distance: { name: "歩行距離", unit: "m" },
+      hr_before: { name: "開始前 脈拍数", unit: "bpm" },
+      spo2_before: { name: "開始前 SpO2", unit: "%" },
+      hr_after: { name: "終了後 脈拍数", unit: "bpm" },
+      spo2_after: { name: "終了後 SpO2", unit: "%" },
       borg_before: { name: "開始前 Borg指数", unit: "" },
       borg_after: { name: "終了後 Borg指数", unit: "" }
     },
