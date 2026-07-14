@@ -973,6 +973,9 @@ function showHistoryDetail(recordIndex) {
       if (evalId === "bls") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(仰臥位: ${evalData.rolling + evalData.rolling_both}点 / 座位: ${evalData.sitting}点 / 立位: ${evalData.standing}点 / 移乗: ${evalData.transfers}点 / 歩行: ${evalData.walking}点)</div>`;
       }
+      if (evalId === "tis") {
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(静的座位: ${evalData.static_bal || 0}点 / 動的座位: ${evalData.dynamic_bal || 0}点 / 協調動作: ${evalData.coordination || 0}点)</div>`;
+      }
       if (evalId === "sara") {
         const c_mean = ((evalData.chase_left || 0) + (evalData.chase_right || 0)) / 2;
         const n_mean = ((evalData.nose_left || 0) + (evalData.nose_right || 0)) / 2;
@@ -2214,7 +2217,56 @@ function recalculateMultiScaleTotal(evalId, meta) {
   let sum = 0;
   let allSelected = true;
 
-  meta.items.forEach(item => {
+  if (evalId === "tis") {
+    const getVal = (id) => {
+      const input = document.querySelector(`input[name="tis_${id}"]`);
+      return (input && input.value !== "") ? parseInt(input.value) : null;
+    };
+
+    const s1 = getVal("s_1");
+    if (s1 === 0) {
+      sum = 0;
+      allSelected = true;
+    } else {
+      const addVal = (id, parentVal = null) => {
+        const val = getVal(id);
+        if (val === null) {
+          allSelected = false;
+          return null;
+        }
+        if (parentVal === 0) {
+          return 0;
+        }
+        sum += val;
+        return val;
+      };
+
+      addVal("s_1");
+      addVal("s_2");
+      addVal("s_3");
+
+      const d1 = addVal("d_1");
+      const d2 = addVal("d_2", d1);
+      addVal("d_3", d2);
+
+      const d4 = addVal("d_4");
+      const d5 = addVal("d_5", d4);
+      addVal("d_6", d5);
+
+      const d7 = addVal("d_7");
+      addVal("d_8", d7);
+
+      const d9 = addVal("d_9");
+      addVal("d_10", d9);
+
+      const c1 = addVal("c_1");
+      addVal("c_2", c1);
+
+      const c3 = addVal("c_3");
+      addVal("c_4", c3);
+    }
+  } else {
+    meta.items.forEach(item => {
     const input = document.querySelector(`input[name="${evalId}_${item.id}"]`);
     if (input && input.value !== "") {
       sum += parseFloat(input.value);
@@ -2222,6 +2274,7 @@ function recalculateMultiScaleTotal(evalId, meta) {
       allSelected = false;
     }
   });
+  }
 
   const totalEl = document.getElementById(`total-${evalId}`);
   if (totalEl) {
@@ -2324,9 +2377,53 @@ function handleAssessmentSubmit(e) {
           data.motor_total = data.m_hip + data.m_knee + data.m_foot + data.m_proximal + data.m_distal;
           data.sensory_total = data.s_touch + data.s_position;
         } else if (evalId === "tis") {
-          data.static_bal = data.static_bal || 0;
-          data.dynamic_bal = data.dynamic_bal || 0;
-          data.coordination = data.coordination || 0;
+          const s1 = data.s_1;
+          if (s1 === 0) {
+            meta.items.forEach(item => {
+              if (item.id !== "s_1") data[item.id] = 0;
+            });
+            data.static_bal = 0;
+            data.dynamic_bal = 0;
+            data.coordination = 0;
+            data.total = 0;
+          } else {
+            const forceZero = (id, parentVal) => {
+              if (parentVal === 0) {
+                data[id] = 0;
+              }
+              return data[id];
+            };
+            
+            data.static_bal = (data.s_1 || 0) + (data.s_2 || 0) + (data.s_3 || 0);
+            
+            const d1 = forceZero("d_1", null);
+            const d2 = forceZero("d_2", d1);
+            forceZero("d_3", d2);
+            
+            const d4 = forceZero("d_4", null);
+            const d5 = forceZero("d_5", d4);
+            forceZero("d_6", d5);
+            
+            const d7 = forceZero("d_7", null);
+            forceZero("d_8", d7);
+            
+            const d9 = forceZero("d_9", null);
+            forceZero("d_10", d9);
+            
+            data.dynamic_bal = (data.d_1 || 0) + (data.d_2 || 0) + (data.d_3 || 0) +
+                               (data.d_4 || 0) + (data.d_5 || 0) + (data.d_6 || 0) +
+                               (data.d_7 || 0) + (data.d_8 || 0) + (data.d_9 || 0) + (data.d_10 || 0);
+
+            const c1 = forceZero("c_1", null);
+            forceZero("c_2", c1);
+            
+            const c3 = forceZero("c_3", null);
+            forceZero("c_4", c3);
+            
+            data.coordination = (data.c_1 || 0) + (data.c_2 || 0) + (data.c_3 || 0) + (data.c_4 || 0);
+            
+            data.total = data.static_bal + data.dynamic_bal + data.coordination;
+          }
         } else if (evalId === "arat") {
           data.grasp_sub = (data.g1 || 0) + (data.g2 || 0) + (data.g3 || 0) + (data.g4 || 0) + (data.g5 || 0) + (data.g6 || 0);
           data.grip_sub = (data.gr1 || 0) + (data.gr2 || 0) + (data.gr3 || 0) + (data.gr4 || 0);
