@@ -515,12 +515,11 @@ function initChartFilterDropdowns(patient) {
         catName = REHAB_DOMAINS[dId].categories[cId];
       }
       
-      const displayName = catName ? `【${catName}】 ${meta.name}` : meta.name;
-      grouped[dId].push({ id, name: displayName });
+      grouped[dId].push({ id, name: meta.name });
     } else {
       const custom = state.customEvaluations.find(c => c.id === id);
       if (custom) {
-        grouped.custom.push({ id, name: `【カスタム】 ${custom.name}` });
+        grouped.custom.push({ id, name: custom.name });
       }
     }
   });
@@ -696,13 +695,15 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
     totalScore = `${evalData.total} 点`;
   } else if (typeof evalData === "number") {
     totalScore = `${evalData} ${meta.unit || "点"}`;
-  } else {
+  } else if (typeof evalData === "string") {
     totalScore = `${evalData} ${meta.unit || ""}`;
   }
-  totalBadge.textContent = totalScore;
 
   titleRow.appendChild(title);
-  titleRow.appendChild(totalBadge);
+  if (totalScore) {
+    totalBadge.textContent = totalScore;
+    titleRow.appendChild(totalBadge);
+  }
   header.appendChild(titleRow);
 
   // 3. 日付選択チップス (Date Chips) の追加
