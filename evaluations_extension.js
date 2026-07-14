@@ -2504,7 +2504,8 @@ const REHAB_DOMAINS = {
 PRESET_EVALUATIONS.tis = {
   id: "tis",
   name: "TIS（Trunk Impairment Scale）",
-  category: "身体機能",
+  domain: "neuron",
+  category: "motor_stroke",
   description: "体幹機能を多角的に評価するスケールです（静的バランス7点、動的バランス10点、協調動作6点、計23点満点）。",
   inputType: "multi_scale",
   subItems: {
