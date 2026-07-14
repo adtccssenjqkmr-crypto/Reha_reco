@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="app.css?v=24">
+  <link rel="stylesheet" href="app.css?v=25">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -303,13 +303,13 @@
   </script>
 
   <!-- APP Logic Files -->
-  <script src="evaluations.js?v=24"></script>
-  <script src="evaluations_extension.js?v=24"></script>
-  <script src="charts.js?v=24"></script>
-  <script src="app.js?v=24"></script>
+  <script src="evaluations.js?v=25"></script>
+  <script src="evaluations_extension.js?v=25"></script>
+  <script src="charts.js?v=25"></script>
+  <script src="app.js?v=25"></script>
   <script>
-    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v26)
-    const APP_VERSION = "v26";
+    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v27)
+    const APP_VERSION = "v27";
     if (localStorage.getItem("rehareco_app_version") !== APP_VERSION) {
       console.log("New version detected (" + APP_VERSION + "). Purging caches and registrations...");
       if ('serviceWorker' in navigator) {

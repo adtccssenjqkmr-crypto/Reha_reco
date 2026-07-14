@@ -2267,13 +2267,16 @@ function recalculateMultiScaleTotal(evalId, meta) {
     }
   } else {
     meta.items.forEach(item => {
-    const input = document.querySelector(`input[name="${evalId}_${item.id}"]`);
-    if (input && input.value !== "") {
-      sum += parseFloat(input.value);
-    } else {
-      allSelected = false;
-    }
-  });
+      const input = document.querySelector(`input[name="${evalId}_${item.id}"]`);
+      if (input && input.value !== "") {
+        const val = parseFloat(input.value);
+        if (!isNaN(val)) {
+          sum += val;
+        }
+      } else {
+        allSelected = false;
+      }
+    });
   }
 
   const totalEl = document.getElementById(`total-${evalId}`);
@@ -2363,9 +2366,12 @@ function handleAssessmentSubmit(e) {
       if (meta.inputType === "multi_scale") {
         let total = 0;
         meta.items.forEach(item => {
-          const val = parseFloat(document.querySelector(`input[name="${evalId}_${item.id}"]`).value);
-          data[item.id] = val;
-          total += val;
+          const rawVal = document.querySelector(`input[name="${evalId}_${item.id}"]`).value;
+          const val = parseFloat(rawVal);
+          data[item.id] = isNaN(val) ? rawVal : val;
+          if (!isNaN(val)) {
+            total += val;
+          }
         });
         data.total = total;
 
