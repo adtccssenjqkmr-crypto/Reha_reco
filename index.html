@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="app.css?v=28">
+  <link rel="stylesheet" href="app.css?v=31">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -196,6 +196,16 @@
         </div>
       </div>
 
+      <!-- プレミアムプラン -->
+      <div class="card" id="premium-card" style="margin-top: 20px;">
+        <h3 class="card-title">プレミアムプラン</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">アプリ内課金により、すべての広告バナーを恒久的に非表示にします。機能制限の解除などはなく、広告削除のみ行われます。</p>
+        
+        <div id="premium-status-area" style="display: flex; flex-direction: column; gap: 12px;">
+          <button class="btn btn-green" id="btn-purchase-premium" style="background-color: #0284c7; border-color: #0284c7; color: white;">広告を削除する (アプリ内課金)</button>
+        </div>
+      </div>
+
       <!-- データ管理 -->
       <div class="card">
         <h3 class="card-title">データ管理</h3>
@@ -216,6 +226,12 @@
     </section>
 
   </main>
+
+  <!-- Ad Banner Placeholder -->
+  <div class="ad-banner-area" id="main-ad-banner">
+    <span class="ad-label">SPONSORED</span>
+    <span class="ad-dummy-text">広告エリア (プレミアム購入で非表示になります)</span>
+  </div>
 
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav">
@@ -303,13 +319,13 @@
   </script>
 
   <!-- APP Logic Files -->
-  <script src="evaluations.js?v=28"></script>
-  <script src="evaluations_extension.js?v=28"></script>
-  <script src="charts.js?v=28"></script>
-  <script src="app.js?v=28"></script>
+  <script src="evaluations.js?v=31"></script>
+  <script src="evaluations_extension.js?v=31"></script>
+  <script src="charts.js?v=31"></script>
+  <script src="app.js?v=31"></script>
   <script>
-    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v30)
-    const APP_VERSION = "v30";
+    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v33)
+    const APP_VERSION = "v33";
     if (localStorage.getItem("rehareco_app_version") !== APP_VERSION) {
       console.log("New version detected (" + APP_VERSION + "). Purging caches and registrations...");
       if ('serviceWorker' in navigator) {

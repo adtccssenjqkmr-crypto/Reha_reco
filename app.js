@@ -25,6 +25,7 @@ let timerElapsed = 0;
 // アプリ初期化時の処理
 document.addEventListener("DOMContentLoaded", () => {
   loadData();
+  initPremiumStatus(); // プレミアム課金＆広告状態のチェック
   setupEventListeners();
   renderPatientsList();
   renderCustomEvaluationsList();
@@ -327,6 +328,12 @@ function setupEventListeners() {
   const editRecordBtn = document.getElementById("btn-edit-record");
   if (editRecordBtn) {
     editRecordBtn.addEventListener("click", editCurrentRecord);
+  }
+
+  // プレミアム機能購入ボタン
+  const purchaseBtn = document.getElementById("btn-purchase-premium");
+  if (purchaseBtn) {
+    purchaseBtn.addEventListener("click", purchasePremium);
   }
 }
 
@@ -3469,4 +3476,98 @@ function getDemoData() {
       ]
     }
   ];
+}
+
+// -------------------------------------------------------------
+// プレミアムプラン (アプリ内課金 & 広告制御) ロジック
+// -------------------------------------------------------------
+
+// プレミアムステータスの読み込みと適用
+function initPremiumStatus() {
+  const isPremium = localStorage.getItem("premium_unlocked") === "true";
+  if (isPremium) {
+    document.body.classList.remove("has-ad");
+    updatePremiumUI(true);
+  } else {
+    document.body.classList.add("has-ad");
+    updatePremiumUI(false);
+  }
+}
+
+// プレミアムUI表示の更新
+function updatePremiumUI(isPremium) {
+  const statusArea = document.getElementById("premium-status-area");
+  if (!statusArea) return;
+
+  if (isPremium) {
+    statusArea.innerHTML = `
+      <div style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; border-radius: 8px; padding: 12px; text-align: center;">
+        <span style="color: #22c55e; font-weight: 700; font-size: 14px;">✓ プレミアムプラン適用済み</span>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0;">すべての広告バナーが恒久的に非表示になっています。</p>
+      </div>
+    `;
+  } else {
+    statusArea.innerHTML = `
+      <button class="btn btn-green" id="btn-purchase-premium" style="background-color: #0284c7; border-color: #0284c7; color: white; width: 100%;">
+        広告を非表示にする (アプリ内課金)
+      </button>
+    `;
+    // イベント再バインド
+    const purchaseBtn = document.getElementById("btn-purchase-premium");
+    if (purchaseBtn) {
+      purchaseBtn.addEventListener("click", purchasePremium);
+    }
+  }
+}
+
+// アプリ内決済処理の呼び出し
+async function purchasePremium() {
+  // Google Play TWA 環境 (Digital Goods API) の検出
+  if ('getDigitalGoodsService' in window) {
+    try {
+      const service = await window.getDigitalGoodsService('https://play.google.com/billing');
+      const details = await service.getDetails(['rehareco_premium_ads']);
+      
+      if (details && details.length > 0) {
+        // PaymentRequest API でGoogle Play支払いダイアログを起動
+        const paymentMethods = [{
+          supportedMethods: 'https://play.google.com/billing',
+          data: { sku: 'rehareco_premium_ads' }
+        }];
+        
+        const paymentDetails = {
+          total: {
+            label: 'Total',
+            amount: { currency: 'JPY', value: details[0].price.value }
+          }
+        };
+        
+        const request = new PaymentRequest(paymentMethods, paymentDetails);
+        const response = await request.show();
+        
+        // 支払い成功
+        await response.complete('success');
+        
+        // サーバーまたはアプリ側で購入検証トークンを承認したと仮定
+        localStorage.setItem("premium_unlocked", "true");
+        initPremiumStatus();
+        alert("プレミアムプランの購入が完了しました！すべての広告を非表示にしました。");
+      } else {
+        alert("課金アイテムの取得に失敗しました。Play Consoleでの製品ID登録を確認してください。");
+      }
+    } catch (e) {
+      console.error("決済処理エラー:", e);
+      alert("決済処理がキャンセルされたか、エラーが発生しました。");
+    }
+  } else {
+    // 通常ブラウザ (PCデバッグ環境) 下での模擬シミュレーション決済
+    const confirmPurchase = confirm(
+      "【決済シミュレーション】\nPCブラウザ動作時のデバッグ用です。\n広告非表示プレミアムプラン（模擬購入）を実行しますか？"
+    );
+    if (confirmPurchase) {
+      localStorage.setItem("premium_unlocked", "true");
+      initPremiumStatus();
+      alert("模擬購入が完了しました！すべての広告バナーを非表示にしました。");
+    }
+  }
 }

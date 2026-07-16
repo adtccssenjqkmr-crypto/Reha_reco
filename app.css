@@ -1038,3 +1038,47 @@ h1, h2, h3, h4, h5, h6 {
   padding-left: 2px;
 }
 
+/* Ad Banner Styles & Layout Padding */
+body.has-ad {
+  padding-bottom: calc(122px + var(--safe-bottom)) !important;
+}
+
+.ad-banner-area {
+  display: none;
+  position: fixed;
+  bottom: calc(56px + var(--safe-bottom));
+  left: 0;
+  right: 0;
+  height: 50px;
+  background-color: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 998;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.02);
+}
+
+body.has-ad .ad-banner-area {
+  display: flex;
+}
+
+.ad-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.ad-dummy-text {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
