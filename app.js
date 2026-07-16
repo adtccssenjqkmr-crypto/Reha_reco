@@ -540,11 +540,27 @@ function initChartFilterDropdowns(patient) {
         opt.value = item.id;
         
         let displayName = item.name;
-        const match = displayName.match(/^([A-Za-z0-9\-]+)/);
-        if (match) {
-          displayName = match[1];
+        const specialMappings = {
+          "joa_hip": "JOA股関節",
+          "joa_knee": "JOA膝関節",
+          "joa_back": "JOA腰",
+          "joa_shoulder": "JOA肩関節"
+        };
+        
+        if (specialMappings[item.id]) {
+          displayName = specialMappings[item.id];
         } else {
-          displayName = displayName.split("（")[0].split("(")[0].trim();
+          const match = displayName.match(/^([A-Za-z0-9\-]+)/);
+          if (match) {
+            displayName = match[1];
+            // 整形外科ドメイン (ortho) の場合は「テスト」を補完する
+            const meta = PRESET_EVALUATIONS[item.id];
+            if (meta && meta.domain === "ortho" && !displayName.toLowerCase().includes("test") && !displayName.includes("テスト")) {
+              displayName += "テスト";
+            }
+          } else {
+            displayName = displayName.split("（")[0].split("(")[0].trim();
+          }
         }
         
         opt.textContent = displayName;
