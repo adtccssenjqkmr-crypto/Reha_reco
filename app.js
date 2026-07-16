@@ -538,7 +538,16 @@ function initChartFilterDropdowns(patient) {
       grouped[dId].forEach(item => {
         const opt = document.createElement("option");
         opt.value = item.id;
-        opt.textContent = item.name;
+        
+        let displayName = item.name;
+        const match = displayName.match(/^([A-Za-z0-9\-]+)/);
+        if (match) {
+          displayName = match[1];
+        } else {
+          displayName = displayName.split("（")[0].split("(")[0].trim();
+        }
+        
+        opt.textContent = displayName;
         group.appendChild(opt);
       });
       select.appendChild(group);
@@ -552,7 +561,16 @@ function initChartFilterDropdowns(patient) {
     grouped.custom.forEach(item => {
       const opt = document.createElement("option");
       opt.value = item.id;
-      opt.textContent = item.name;
+      
+      let displayName = item.name;
+      const match = displayName.match(/^([A-Za-z0-9\-]+)/);
+      if (match) {
+        displayName = match[1];
+      } else {
+        displayName = displayName.split("（")[0].split("(")[0].trim();
+      }
+      
+      opt.textContent = displayName;
       group.appendChild(opt);
     });
     select.appendChild(group);

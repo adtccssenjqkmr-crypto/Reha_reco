@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="リハレコ">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="app.css?v=26">
+  <link rel="stylesheet" href="app.css?v=27">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -158,9 +158,9 @@
           <!-- 動的に生成される評価入力エリア -->
           <div id="dynamic-assessment-inputs"></div>
 
-          <div class="flex-row" style="margin-top: 24px;">
-            <button type="button" class="btn btn-secondary" id="btn-back-to-select" style="flex: 1;">項目選び直す</button>
-            <button type="submit" class="btn" id="btn-save-assessment" style="flex: 2;">記録を保存する</button>
+          <div class="flex-row" style="margin-top: 24px; gap: 8px;">
+            <button type="button" class="btn btn-secondary" id="btn-back-to-select" style="flex: 1; white-space: nowrap; font-size: 14px; padding: 10px 4px;">項目選び直す</button>
+            <button type="submit" class="btn" id="btn-save-assessment" style="flex: 1.2; white-space: nowrap; font-size: 14px; padding: 10px 4px;">記録を保存する</button>
           </div>
         </form>
       </div>
@@ -303,13 +303,13 @@
   </script>
 
   <!-- APP Logic Files -->
-  <script src="evaluations.js?v=26"></script>
-  <script src="evaluations_extension.js?v=26"></script>
-  <script src="charts.js?v=26"></script>
-  <script src="app.js?v=26"></script>
+  <script src="evaluations.js?v=27"></script>
+  <script src="evaluations_extension.js?v=27"></script>
+  <script src="charts.js?v=27"></script>
+  <script src="app.js?v=27"></script>
   <script>
-    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v28)
-    const APP_VERSION = "v28";
+    // PWA キャッシュ強制パージ & 自己修復アップデートロジック (v29)
+    const APP_VERSION = "v29";
     if (localStorage.getItem("rehareco_app_version") !== APP_VERSION) {
       console.log("New version detected (" + APP_VERSION + "). Purging caches and registrations...");
       if ('serviceWorker' in navigator) {
