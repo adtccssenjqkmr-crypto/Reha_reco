@@ -827,40 +827,113 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
       
       subItemKeys.forEach(k => {
         const val = evalData[k];
-        const itemConfig = itemsConfig.find(x => x.id === k);
         const subItemConfig = meta.subItems[k];
 
         const item = document.createElement("div");
         item.className = "eval-detail-item";
+        item.style.borderLeft = "4px solid var(--accent-blue)";
+        item.style.paddingLeft = "10px";
 
         const itemHeader = document.createElement("div");
         itemHeader.className = "eval-detail-item-header";
 
         const nameSpan = document.createElement("span");
         nameSpan.className = "eval-detail-item-name";
+        nameSpan.style.fontWeight = "700";
         nameSpan.textContent = subItemConfig ? subItemConfig.name : k;
 
         const valSpan = document.createElement("span");
         valSpan.className = "eval-detail-item-val";
+        valSpan.style.fontWeight = "700";
         valSpan.textContent = val !== undefined ? `${val} 点` : "--";
 
         itemHeader.appendChild(nameSpan);
         itemHeader.appendChild(valSpan);
         item.appendChild(itemHeader);
-
-        let descText = "";
-        if (itemConfig && itemConfig.criteria && val !== undefined) {
-          descText = itemConfig.criteria[val] || "";
-        }
-
-        if (descText) {
-          const descDiv = document.createElement("div");
-          descDiv.className = "eval-detail-item-desc";
-          descDiv.textContent = descText;
-          item.appendChild(descDiv);
-        }
-
         grid.appendChild(item);
+
+        // 各大項目に属する小項目がある場合はインデント表示
+        let childItems = [];
+        if (evalId === "joa_hip") {
+          if (k === "pain") childItems = ["pain"];
+          if (k === "rom") childItems = ["rom_flex", "rom_abd", "rom_rot"];
+          if (k === "walking") childItems = ["walking"];
+          if (k === "adl") childItems = ["adl_nail", "adl_socks", "adl_toilet", "adl_vehicle", "adl_stairs"];
+        } else if (evalId === "joa_back") {
+          if (k === "symptoms") childItems = ["sym_pain", "sym_numb", "sym_walk"];
+          if (k === "findings") childItems = ["find_slr", "find_sensory", "find_motor"];
+          if (k === "adl_back") childItems = ["adl_turn", "adl_stand", "adl_wash", "adl_posture", "adl_heavy", "adl_walk", "adl_clothes"];
+        } else if (evalId === "joa_shoulder") {
+          if (k === "pain") childItems = ["pain"];
+          if (k === "rom") childItems = ["rom_flex", "rom_abd", "rom_rot"];
+          if (k === "function") childItems = ["adl_hair", "adl_belt", "adl_eat", "adl_clothes", "adl_lift"];
+          if (k === "support") childItems = ["support"];
+          if (k === "xray") childItems = ["xray"];
+        } else if (evalId === "tis") {
+          if (k === "static_bal") childItems = ["s_1", "s_2", "s_3"];
+          if (k === "dynamic_bal") childItems = ["d_1", "d_2", "d_3", "d_4", "d_5", "d_6", "d_7", "d_8", "d_9", "d_10"];
+          if (k === "coordination") childItems = ["c_1", "c_2", "c_3", "c_4"];
+        } else {
+          childItems = [k];
+        }
+
+        if (childItems.length > 1 || (childItems.length === 1 && childItems[0] !== k)) {
+          childItems.forEach(childId => {
+            const childVal = evalData[childId];
+            if (childVal === undefined) return;
+            const childConfig = itemsConfig.find(x => x.id === childId);
+            if (!childConfig) return;
+
+            const childItem = document.createElement("div");
+            childItem.className = "eval-detail-item";
+            childItem.style.marginLeft = "16px";
+            childItem.style.borderLeft = "2px dashed var(--border-color)";
+            childItem.style.paddingLeft = "8px";
+            childItem.style.background = "rgba(0, 0, 0, 0.01)";
+
+            const childHeader = document.createElement("div");
+            childHeader.className = "eval-detail-item-header";
+
+            const childName = document.createElement("span");
+            childName.className = "eval-detail-item-name";
+            childName.style.fontSize = "12px";
+            childName.textContent = childConfig.name.replace(/^IV\.\s*日常生活動作\s*-\s*/, "").replace(/^III\.\s*日常生活動作\s*-\s*/, "").replace(/^II\.\s*可動域\s*-\s*/, "").replace(/^I\.\s*自覚症状\s*-\s*/, "").replace(/^II\.\s*客観的所見\s*-\s*/, "");
+
+            const childValue = document.createElement("span");
+            childValue.className = "eval-detail-item-val";
+            childValue.style.fontSize = "12px";
+            childValue.textContent = `${childVal} 点`;
+
+            childHeader.appendChild(childName);
+            childHeader.appendChild(childValue);
+            childItem.appendChild(childHeader);
+
+            let childDesc = "";
+            if (childConfig.criteria) {
+              childDesc = childConfig.criteria[childVal] || "";
+            }
+            if (childDesc) {
+              const childDescDiv = document.createElement("div");
+              childDescDiv.className = "eval-detail-item-desc";
+              childDescDiv.style.fontSize = "11px";
+              childDescDiv.textContent = childDesc;
+              childItem.appendChild(childDescDiv);
+            }
+            grid.appendChild(childItem);
+          });
+        } else {
+          let descText = "";
+          const singleConfig = itemsConfig.find(x => x.id === k) || itemsConfig.find(x => x.id === childItems[0]);
+          if (singleConfig && singleConfig.criteria && val !== undefined) {
+            descText = singleConfig.criteria[val] || "";
+          }
+          if (descText) {
+            const descDiv = document.createElement("div");
+            descDiv.className = "eval-detail-item-desc";
+            descDiv.textContent = descText;
+            item.appendChild(descDiv);
+          }
+        }
       });
     }
   }
@@ -962,13 +1035,25 @@ function showHistoryDetail(recordIndex) {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(UEMS: ${evalData.uems}点 / LEMS: ${evalData.lems}点)</div>`;
       }
       if (evalId === "joa_hip") {
-        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${evalData.pain}点 / 可動域: ${evalData.rom}点 / 歩行: ${evalData.walking}点 / ADL: ${evalData.adl}点)</div>`;
+        const painVal = evalData.pain !== undefined ? evalData.pain : 0;
+        const romVal = evalData.rom_flex !== undefined ? 
+          ((evalData.rom_flex || 0) + (evalData.rom_abd || 0) + (evalData.rom_rot || 0)) : (evalData.rom || 0);
+        const walkingVal = evalData.walking !== undefined ? evalData.walking : 0;
+        const adlVal = evalData.adl_nail !== undefined ?
+          ((evalData.adl_nail || 0) + (evalData.adl_socks || 0) + (evalData.adl_toilet || 0) + (evalData.adl_vehicle || 0) + (evalData.adl_stairs || 0)) : (evalData.adl || 0);
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${painVal}点 / 可動域: ${romVal}点 / 歩行: ${walkingVal}点 / ADL: ${adlVal}点)</div>`;
       }
       if (evalId === "joa_knee") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(痛み・歩行: ${evalData.pain_walking}点 / 階段: ${evalData.stairs}点 / 可動域制限: ${evalData.rom_limitation}点 / 腫脹: ${evalData.swelling}点)</div>`;
       }
       if (evalId === "joa_back") {
-        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(自覚症状: ${evalData.symptoms}点 / 客観的所見: ${evalData.findings}点 / ADL: ${evalData.adl_back}点)</div>`;
+        const symVal = evalData.sym_pain !== undefined ?
+          ((evalData.sym_pain || 0) + (evalData.sym_numb || 0) + (evalData.sym_walk || 0)) : (evalData.symptoms || 0);
+        const findVal = evalData.find_slr !== undefined ?
+          ((evalData.find_slr || 0) + (evalData.find_sensory || 0) + (evalData.find_motor || 0)) : (evalData.findings || 0);
+        const adlVal = evalData.adl_turn !== undefined ?
+          ((evalData.adl_turn || 0) + (evalData.adl_stand || 0) + (evalData.adl_wash || 0) + (evalData.adl_posture || 0) + (evalData.adl_heavy || 0) + (evalData.adl_walk || 0) + (evalData.adl_clothes || 0)) : (evalData.adl_back || 0);
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(自覚症状: ${symVal}点 / 客観的所見: ${findVal}点 / ADL: ${adlVal}点)</div>`;
       }
                         if (evalId === "nasva") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px; line-height:1.4;">
@@ -1002,7 +1087,14 @@ function showHistoryDetail(recordIndex) {
         </div>`;
       }
       if (evalId === "joa_shoulder") {
-        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${evalData.pain}点 / 可動域: ${evalData.rom}点 / 機能: ${evalData.function}点 / 支持性: ${evalData.support}点 / X線: ${evalData.xray}点)</div>`;
+        const painVal = evalData.pain !== undefined ? evalData.pain : 0;
+        const romVal = evalData.rom_flex !== undefined ?
+          ((evalData.rom_flex || 0) + (evalData.rom_abd || 0) + (evalData.rom_rot || 0)) : (evalData.rom || 0);
+        const adlVal = evalData.adl_hair !== undefined ?
+          ((evalData.adl_hair || 0) + (evalData.adl_belt || 0) + (evalData.adl_eat || 0) + (evalData.adl_clothes || 0) + (evalData.adl_lift || 0)) : (evalData.function || 0);
+        const supportVal = evalData.support !== undefined ? evalData.support : 0;
+        const xrayVal = evalData.xray !== undefined ? evalData.xray : 0;
+        subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(疼痛: ${painVal}点 / 可動域: ${romVal}点 / 機能: ${adlVal}点 / 支持性: ${supportVal}点 / X線: ${xrayVal}点)</div>`;
       }
       if (evalId === "bls") {
         subTotalsHTML += `<div style="font-size:12px; color: var(--text-muted); margin-left: 12px;">(仰臥位: ${evalData.rolling + evalData.rolling_both}点 / 座位: ${evalData.sitting}点 / 立位: ${evalData.standing}点 / 移乗: ${evalData.transfers}点 / 歩行: ${evalData.walking}点)</div>`;
@@ -2479,24 +2571,29 @@ function handleAssessmentSubmit(e) {
           data.motor_total = data.uems + data.lems;
           data.total = data.motor_total; // 合計値を運動合計点に設定
         } else if (evalId === "joa_hip") {
-          data.pain = data.pain || 0;
-          data.rom = data.rom || 0;
-          data.walking = data.walking || 0;
-          data.adl = data.adl || 0;
+          data.pain = data.pain !== undefined ? data.pain : 0;
+          data.rom = (data.rom_flex || 0) + (data.rom_abd || 0) + (data.rom_rot || 0);
+          data.walking = data.walking !== undefined ? data.walking : 0;
+          data.adl = (data.adl_nail || 0) + (data.adl_socks || 0) + (data.adl_toilet || 0) + (data.adl_vehicle || 0) + (data.adl_stairs || 0);
         } else if (evalId === "joa_knee") {
           data.pain_walking = data.pain_walking || 0;
           data.stairs = data.stairs || 0;
           data.rom_limitation = data.rom_limitation || 0;
           data.swelling = data.swelling || 0;
         } else if (evalId === "joa_back") {
-          data.symptoms = data.symptoms || 0;
-          data.findings = data.findings || 0;
-          data.adl_back = data.adl_back || 0;
+          data.symptoms = (data.sym_pain || 0) + (data.sym_numb || 0) + (data.sym_walk || 0);
+          data.findings = (data.find_slr || 0) + (data.find_sensory || 0) + (data.find_motor || 0);
+          data.adl_back = (data.adl_turn || 0) + (data.adl_stand || 0) + (data.adl_wash || 0) + (data.adl_posture || 0) + (data.adl_heavy || 0) + (data.adl_walk || 0) + (data.adl_clothes || 0);
         } else if (evalId === "bls") {
           // 仰臥位 + 両方向追加点 + その他項目の単純合計
           data.total = (data.rolling || 0) + (data.rolling_both || 0) + (data.sitting || 0) + (data.standing || 0) + (data.transfers || 0) + (data.walking || 0);
         } else if (evalId === "joa_shoulder") {
-          data.total = (data.pain || 0) + (data.rom || 0) + (data.function || 0) + (data.support || 0) + (data.xray || 0);
+          data.pain = data.pain !== undefined ? data.pain : 0;
+          data.rom = (data.rom_flex || 0) + (data.rom_abd || 0) + (data.rom_rot || 0);
+          data.function = (data.adl_hair || 0) + (data.adl_belt || 0) + (data.adl_eat || 0) + (data.adl_clothes || 0) + (data.adl_lift || 0);
+          data.support = data.support !== undefined ? data.support : 0;
+          data.xray = data.xray !== undefined ? data.xray : 0;
+          data.total = data.pain + data.rom + data.function + data.support + data.xray;
         } else if (evalId === "sara") {
           const chase_mean = ((data.chase_left || 0) + (data.chase_right || 0)) / 2;
           const nose_mean = ((data.nose_left || 0) + (data.nose_right || 0)) / 2;
