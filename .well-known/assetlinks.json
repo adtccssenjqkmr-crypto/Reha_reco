@@ -5,7 +5,7 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.naoki.rehareco",
+      "package_name": "com.rehareco.myapp",
       "sha256_cert_fingerprints": [
         "0F:F0:9A:8D:AA:53:49:59:45:9C:B9:FF:ED:DC:3E:30:F5:89:01:35:D8:79:39:51:74:07:04:65:C8:DA:CD:12"
       ]
