@@ -216,6 +216,10 @@ function setupEventListeners() {
   // 患者モーダルの閉じるボタン類
   document.getElementById("btn-close-patient-modal").addEventListener("click", hidePatientModal);
   document.getElementById("btn-cancel-patient").addEventListener("click", hidePatientModal);
+  const deletePatientBtn = document.getElementById("btn-delete-patient");
+  if (deletePatientBtn) {
+    deletePatientBtn.addEventListener("click", handleDeletePatient);
+  }
 
   // 履歴詳細モーダルの閉じるボタン類
   document.getElementById("btn-close-history-modal").addEventListener("click", () => hideModal("history-detail-modal"));
@@ -405,6 +409,7 @@ function showPatientModal(index = -1) {
   const modal = document.getElementById("patient-modal");
   const form = document.getElementById("patient-form");
   const title = document.getElementById("patient-modal-title");
+  const deleteBtn = document.getElementById("btn-delete-patient");
   
   form.reset();
   document.getElementById("patient-index").value = index;
@@ -418,9 +423,11 @@ function showPatientModal(index = -1) {
     document.getElementById("patient-gender").value = p.gender || "";
     document.getElementById("patient-diagnosis").value = p.diagnosis || "";
     document.getElementById("patient-memo").value = p.memo || "";
+    if (deleteBtn) deleteBtn.style.display = "block";
   } else {
     title.textContent = "新規対象者登録";
     document.getElementById("patient-id").disabled = false;
+    if (deleteBtn) deleteBtn.style.display = "none";
   }
 
   modal.classList.add("active");
@@ -428,6 +435,39 @@ function showPatientModal(index = -1) {
 
 function hidePatientModal() {
   document.getElementById("patient-modal").classList.remove("active");
+}
+
+function handleDeletePatient() {
+  const index = parseInt(document.getElementById("patient-index").value);
+  if (isNaN(index) || index < 0 || index >= state.patients.length) {
+    return;
+  }
+  const p = state.patients[index];
+  
+  // 1回目の確認
+  const confirm1 = confirm(`本当にこの対象者「${p.id}」を削除しますか？`);
+  if (!confirm1) return;
+  
+  // 2回目の最終確認
+  const confirm2 = confirm(`【注意】対象者の削除に伴い、この対象者のすべての評価記録も完全に削除されます。復元はできませんが、本当によろしいですか？`);
+  if (!confirm2) return;
+  
+  // 削除の実行
+  state.patients.splice(index, 1);
+  savePatients();
+  
+  // 描画更新と画面遷移
+  renderPatientsList();
+  hidePatientModal();
+  
+  if (state.currentPatientIndex === index) {
+    state.currentPatientIndex = -1;
+    switchView("view-patients");
+  } else if (state.currentPatientIndex > index) {
+    state.currentPatientIndex--;
+  }
+  
+  alert("対象者を削除しました。");
 }
 
 function handlePatientSubmit(e) {
@@ -551,7 +591,9 @@ function initChartFilterDropdowns(patient) {
           "joa_hip": "JOA股関節",
           "joa_knee": "JOA膝関節",
           "joa_back": "JOA腰",
-          "joa_shoulder": "JOA肩関節"
+          "joa_shoulder": "JOA肩関節",
+          "walk_10m": "10m歩行",
+          "walk_6min": "6分間歩行"
         };
         
         if (specialMappings[item.id]) {
