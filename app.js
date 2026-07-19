@@ -625,7 +625,7 @@ function updateChartSubitemDropdown(evalId) {
     optTotal.textContent = "測定時間 (秒)";
   } else if (meta.inputType === "single_select") {
     optTotal.textContent = "総合スコア";
-  } else if (meta.inputType === "rom" || meta.inputType === "mrc_custom" || meta.inputType === "mmt_custom") {
+  } else if (meta.inputType === "rom" || meta.inputType === "mmt_custom") {
     optTotal.style.display = "none";
   } else {
     optTotal.textContent = "合計点 / 総合値";
@@ -655,7 +655,7 @@ function updateChartSubitemDropdown(evalId) {
   }
 
   // ROMの場合は、最初の関節部位をデフォルトにする
-  if (meta.inputType === "rom" || meta.inputType === "mrc_custom" || meta.inputType === "mmt_custom") {
+  if (meta.inputType === "rom" || meta.inputType === "mmt_custom") {
     subSelect.value = Object.keys(meta.subItems)[0];
   } else if (evalId === "basic_info") {
     subSelect.value = "bmi";
@@ -874,6 +874,13 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
           if (k === "rom") childItems = ["rom_flex", "rom_abd", "rom_rot"];
           if (k === "walking") childItems = ["walking"];
           if (k === "adl") childItems = ["adl_nail", "adl_socks", "adl_toilet", "adl_vehicle", "adl_stairs"];
+        } else if (evalId === "minibest") {
+          data.sec_anticipatory = (data.q1 || 0) + (data.q2 || 0) + (data.q3 || 0);
+          data.sec_reactive = (data.q4 || 0) + (data.q5 || 0) + (data.q6 || 0);
+          data.sec_sensory = (data.q7 || 0) + (data.q8 || 0) + (data.q9 || 0);
+          data.sec_gait = (data.q10 || 0) + (data.q11 || 0) + (data.q12 || 0) + (data.q13 || 0) + (data.q14 || 0);
+        } else if (evalId === "minibest") {
+          if (k === "total") childItems = ["sec_anticipatory", "sec_reactive", "sec_sensory", "sec_gait"];
         } else if (evalId === "joa_back") {
           if (k === "symptoms") childItems = ["sym_pain", "sym_numb", "sym_walk"];
           if (k === "findings") childItems = ["find_slr", "find_sensory", "find_motor"];
@@ -1924,6 +1931,23 @@ function buildInputFormUI(section, evalId, meta) {
   if (meta.inputType === "multi_scale") {
     let totalScoreElId = `total-${evalId}`;
     
+    if (evalId === "minibest") {
+      const subTotalBox = document.createElement("div");
+      subTotalBox.className = "computed-output-box";
+      subTotalBox.style.marginBottom = "15px";
+      subTotalBox.style.fontSize = "12px";
+      subTotalBox.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 5px;">中項目ごとの得点</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+          <div>・予測的姿勢制御: <span id="minibest_sec_anticipatory_val" style="font-weight:bold; color:var(--accent-blue);">0</span> / 6 点</div>
+          <div>・反応的姿勢制御: <span id="minibest_sec_reactive_val" style="font-weight:bold; color:var(--accent-blue);">0</span> / 6 点</div>
+          <div>・感覚配分: <span id="minibest_sec_sensory_val" style="font-weight:bold; color:var(--accent-blue);">0</span> / 6 点</div>
+          <div>・動的歩行: <span id="minibest_sec_gait_val" style="font-weight:bold; color:var(--accent-blue);">0</span> / 10 点</div>
+        </div>
+      `;
+      container.appendChild(subTotalBox);
+    }
+    
     // 合計値インジケーター
     const totalIndicator = document.createElement("div");
     totalIndicator.className = "computed-output-box";
@@ -2002,7 +2026,7 @@ function buildInputFormUI(section, evalId, meta) {
       const bmiVal = document.getElementById(`${evalId}_bmi_computed`);
       const bmiHidden = document.getElementById(`${evalId}_bmi_hidden`);
       const bmiStatus = document.getElementById(`${evalId}_bmi_status`);
-
+      
       const calc = () => {
         const h = parseFloat(heightInput.value);
         const w = parseFloat(weightInput.value);
@@ -2027,6 +2051,23 @@ function buildInputFormUI(section, evalId, meta) {
           bmiStatus.textContent = "--";
         }
       };
+
+      // 過去の身長データを自動取得してセット
+      let lastHeight = null;
+      const pIndex = state.currentPatientIndex;
+      if (pIndex >= 0 && state.patients[pIndex] && state.patients[pIndex].records) {
+        const sorted = [...state.patients[pIndex].records].sort((a, b) => new Date(b.date) - new Date(a.date));
+        for (const r of sorted) {
+          if (r.evaluations && r.evaluations.basic_info && r.evaluations.basic_info.height) {
+            lastHeight = parseFloat(r.evaluations.basic_info.height);
+            break;
+          }
+        }
+      }
+      if (lastHeight && heightInput && !heightInput.value) {
+        heightInput.value = lastHeight;
+        calc();
+      }
 
       heightInput.addEventListener("input", calc);
       weightInput.addEventListener("input", calc);
@@ -2133,6 +2174,9 @@ function buildInputFormUI(section, evalId, meta) {
   // N3. MRC スコア (左右別・セレクトボックス選択式)
   else if (meta.inputType === "mrc_custom") {
     container.innerHTML = `
+      <div class="computed-output-box" style="margin-bottom: 10px;">
+        <div>MRC 合計点 (Sum Score): <span class="computed-val" id="mrc_total_val">--</span> / 60 点</div>
+      </div>
       <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">
         ※各関節の主要動作について、0（完全麻痺）〜5（正常）で採点します。
       </div>
@@ -2168,6 +2212,26 @@ function buildInputFormUI(section, evalId, meta) {
       `;
       container.appendChild(itemEl);
     });
+  
+    setTimeout(() => {
+      const selects = container.querySelectorAll("select");
+      const totalValSpan = document.getElementById("mrc_total_val");
+      
+      const calcTotal = () => {
+        let sum = 0;
+        let count = 0;
+        selects.forEach(sel => {
+          if (sel.value !== "") {
+            sum += parseInt(sel.value);
+            count++;
+          }
+        });
+        totalValSpan.textContent = count > 0 ? sum : "--";
+      };
+      
+      selects.forEach(sel => sel.addEventListener("change", calcTotal));
+      calcTotal(); // 初期表示時にも計算を実行
+    }, 100);
   }
   // N4. MMT 徒手筋力テスト (ROMの全運動方向と完全に一致した項目)
   else if (meta.inputType === "mmt_custom") {
@@ -2892,6 +2956,11 @@ function handleAssessmentSubmit(e) {
           data.stairs = data.stairs || 0;
           data.rom_limitation = data.rom_limitation || 0;
           data.swelling = data.swelling || 0;
+        } else if (evalId === "minibest") {
+          data.sec_anticipatory = (data.q1 || 0) + (data.q2 || 0) + (data.q3 || 0);
+          data.sec_reactive = (data.q4 || 0) + (data.q5 || 0) + (data.q6 || 0);
+          data.sec_sensory = (data.q7 || 0) + (data.q8 || 0) + (data.q9 || 0);
+          data.sec_gait = (data.q10 || 0) + (data.q11 || 0) + (data.q12 || 0) + (data.q13 || 0) + (data.q14 || 0);
         } else if (evalId === "joa_back") {
           data.symptoms = (data.sym_pain || 0) + (data.sym_numb || 0) + (data.sym_walk || 0);
           data.findings = (data.find_slr || 0) + (data.find_sensory || 0) + (data.find_motor || 0);
@@ -2933,6 +3002,7 @@ function handleAssessmentSubmit(e) {
         data.wbi_right = wrVal !== "" ? parseFloat(wrVal) : null;
       }
       else if (meta.inputType === "mrc_custom") {
+        let total = 0;
         meta.items.forEach(item => {
           const lVal = document.querySelector(`select[name="${evalId}_${item.id}_left"]`).value;
           const rVal = document.querySelector(`select[name="${evalId}_${item.id}_right"]`).value;
@@ -2940,7 +3010,10 @@ function handleAssessmentSubmit(e) {
             left: lVal !== "" ? parseInt(lVal) : null,
             right: rVal !== "" ? parseInt(rVal) : null
           };
+          if (lVal !== "") total += parseInt(lVal);
+          if (rVal !== "") total += parseInt(rVal);
         });
+        data.total = total;
       }
       else if (meta.inputType === "mmt_custom") {
         Object.keys(meta.subItems).forEach(key => {

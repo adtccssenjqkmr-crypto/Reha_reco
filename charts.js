@@ -57,7 +57,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   const evalName = evalMeta ? evalMeta.name : evalId;
 
   // 1. ROM（関節可動域）または Bilateral_numeric（膝伸展筋力・握力）の場合（左右別描画）
-  if (evalMeta && (evalMeta.inputType === "rom" || evalMeta.inputType === "bilateral_numeric" || evalMeta.inputType === "knee_wbi_calc" || evalMeta.inputType === "mrc_custom" || evalMeta.inputType === "mmt_custom")) {
+  if (evalMeta && (evalMeta.inputType === "rom" || evalMeta.inputType === "bilateral_numeric" || evalMeta.inputType === "knee_wbi_calc" || evalMeta.inputType === "mmt_custom" || (evalMeta.inputType === "mrc_custom" && activeSubItemId !== "total"))) {
     let subItemKey = activeSubItemId;
     
     // ROMで subItemId が total 等で初期化されている場合は、デフォルトで最初のサブ項目を設定
@@ -468,7 +468,7 @@ function getCustomEvalMeta(evalId) {
 /**
  * 補助関数: 単位の取得
  */
-function getUnitForEvaluation(evalId, activeSubItemId) {
+function getUnitForEvaluation(evalId, subItemId) {
   const preset = PRESET_EVALUATIONS[evalId];
   if (preset) {
     if (preset.subItems && preset.subItems[subItemId] && preset.subItems[subItemId].unit !== undefined) {

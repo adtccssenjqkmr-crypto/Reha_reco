@@ -2894,8 +2894,8 @@ PRESET_EVALUATIONS.tis = {
 // 1. REHAB_DOMAINS の general ドメインの categories に basic_info を新設
 if (typeof REHAB_DOMAINS !== 'undefined' && REHAB_DOMAINS.general) {
   REHAB_DOMAINS.general.categories = {
+    basic_info: "基本情報", // 新設 (最上位)
     rom: "関節可動域 (ROM)",
-    basic_info: "基本情報", // 新設
     balance: "基本動作・バランス",
     gait: "歩行・移動",
     strength: "筋力・その他の機能",
@@ -2944,6 +2944,10 @@ PRESET_EVALUATIONS.minibest = {
   category: "balance",
   subItems: {
     total: { name: "miniBESTest 合計点", unit: "点", computed: true },
+    sec_anticipatory: { name: "1. 予測的姿勢制御", unit: "点/6点", computed: true },
+    sec_reactive: { name: "2. 反応的姿勢制御", unit: "点/6点", computed: true },
+    sec_sensory: { name: "3. 感覚配分", unit: "点/6点", computed: true },
+    sec_gait: { name: "4. 動的歩行", unit: "点/10点", computed: true },
     q1: { name: "1. 座位から立位", unit: "点" },
     q2: { name: "2. つま先立ち", unit: "点" },
     q3: { name: "3. 片足立ち", unit: "点" },
@@ -2986,6 +2990,7 @@ PRESET_EVALUATIONS.mrc = {
   domain: "general",
   category: "strength",
   subItems: {
+    total: { name: "MRC 合計点", unit: "点", computed: true },
     shoulder_abd: { name: "肩外転", unit: "点" },
     elbow_flex: { name: "肘屈曲", unit: "点" },
     wrist_ext: { name: "手背屈", unit: "点" },
