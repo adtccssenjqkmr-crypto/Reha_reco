@@ -47,7 +47,9 @@ function loadData() {
       // 旧ID(P001, P002)が残っている、または新サンプルAが存在しない場合は自動マイグレーション
       const hasOldDemo = state.patients.some(p => p.id === "P001" || p.id === "P002");
       const hasSampleA = state.patients.some(p => p.id === "サンプルA");
-      if (hasOldDemo || !hasSampleA) {
+      const sampleB = state.patients.find(p => p.id === "サンプルB");
+      const hasOldDiagB = sampleB && sampleB.diagnosis && sampleB.diagnosis.includes("腰痛症");
+      if (hasOldDemo || !hasSampleA || hasOldDiagB) {
         state.patients = getDemoData();
         savePatients();
       }
@@ -924,11 +926,6 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
           if (k === "walking") childItems = ["walking"];
           if (k === "adl") childItems = ["adl_nail", "adl_socks", "adl_toilet", "adl_vehicle", "adl_stairs"];
         } else if (evalId === "minibest") {
-          data.sec_anticipatory = (data.q1 || 0) + (data.q2 || 0) + (data.q3 || 0);
-          data.sec_reactive = (data.q4 || 0) + (data.q5 || 0) + (data.q6 || 0);
-          data.sec_sensory = (data.q7 || 0) + (data.q8 || 0) + (data.q9 || 0);
-          data.sec_gait = (data.q10 || 0) + (data.q11 || 0) + (data.q12 || 0) + (data.q13 || 0) + (data.q14 || 0);
-        } else if (evalId === "minibest") {
           if (k === "total") childItems = ["sec_anticipatory", "sec_reactive", "sec_sensory", "sec_gait"];
         } else if (evalId === "joa_back") {
           if (k === "symptoms") childItems = ["sym_pain", "sym_numb", "sym_walk"];
@@ -951,8 +948,8 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
         if (childItems.length > 1 || (childItems.length === 1 && childItems[0] !== k)) {
           childItems.forEach(childId => {
             const childVal = evalData[childId];
-            if (childVal === undefined) return;
-            const childConfig = itemsConfig.find(x => x.id === childId);
+            if (childVal === undefined || childVal === null) return;
+            const childConfig = itemsConfig.find(x => x.id === childId) || (meta.subItems ? meta.subItems[childId] : null);
             if (!childConfig) return;
 
             const childItem = document.createElement("div");
@@ -3967,7 +3964,7 @@ function getDemoData() {
       id: "サンプルB",
       age: 65,
       gender: "女性",
-      diagnosis: "右大腿骨頚部骨折 / 変形性膝関節症 / 腰痛症",
+      diagnosis: "右大腿骨頚部骨折",
       memo: "術後1ヶ月。整形外科系評価、および一般評価（基本情報, WBI, ROM, 筋力, バランス, 歩行, ADL）の時系列記録例を網羅しています。全荷重歩行訓練中。",
       records: [
         {
