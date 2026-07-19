@@ -44,6 +44,13 @@ function loadData() {
     const storedPatients = localStorage.getItem("rehareco_patients");
     if (storedPatients) {
       state.patients = JSON.parse(storedPatients);
+      // 旧ID(P001, P002)が残っている、または新サンプルAが存在しない場合は自動マイグレーション
+      const hasOldDemo = state.patients.some(p => p.id === "P001" || p.id === "P002");
+      const hasSampleA = state.patients.some(p => p.id === "サンプルA");
+      if (hasOldDemo || !hasSampleA) {
+        state.patients = getDemoData();
+        savePatients();
+      }
     } else {
       // デモデータの自動生成
       state.patients = getDemoData();
@@ -3483,16 +3490,17 @@ function escapeHtml(str) {
 function getDemoData() {
   return [
     {
-      id: "P001",
+      id: "サンプルA",
       age: 78,
       gender: "男性",
       diagnosis: "脳梗塞（左片麻痺）",
-      memo: "発症後3ヶ月。リハビリに対して非常に前向き。ROM、BBS、10m歩行、STEF、MAL、ARAT、BI、PASS、FIM、NIHSS、MMSE、BLS、SCP、SCIM、AIS、SARA、JOA股関節/膝/腰痛、整形外科テストを網羅測定。",
+      memo: "発症後3ヶ月。脳卒中・神経系評価、および一般評価（基本情報, ROM, 筋力, バランス, 歩行, ADL）の記録例を網羅しています。",
       records: [
         {
           date: "2026-06-01",
           evaluator: "A.B",
           evaluations: {
+            basic_info: { height: 170.0, weight: 65.0, bmi: 22.5 },
             bbs: {
               total: 32,
               q1: 3, q2: 2, q3: 4, q4: 2, q5: 3, q6: 2, q7: 2, q8: 2, q9: 2, q10: 2, q11: 2, q12: 2, q13: 2, q14: 2
@@ -3610,25 +3618,44 @@ function getDemoData() {
               chase_left: 2, chase_right: 3, nose_left: 2, nose_right: 3,
               rotation_left: 3, rotation_right: 3, shin_left: 3, shin_right: 3
             },
-            joa_hip: {
-              total: 45, pain: 15, rom: 10, walking: 10, adl: 10
+            frt: { reach: 12 },
+            minibest: {
+              total: 10, sec_anticipatory: 3, sec_reactive: 3, sec_sensory: 2, sec_gait: 2,
+              q1: 1, q2: 1, q3: 1, q4: 1, q5: 1, q6: 1, q7: 1, q8: 1, q9: 0, q10: 1, q11: 0, q12: 1, q13: 0, q14: 0
             },
-            joa_knee: {
-              total: 40, pain_walking: 10, stairs: 10, rom_limitation: 15, swelling: 5
+            mrc: {
+              total: 36,
+              shoulder_abd: { left: 3, right: 5 },
+              elbow_flex: { left: 3, right: 5 },
+              wrist_ext: { left: 2, right: 5 },
+              hip_flex: { left: 3, right: 5 },
+              knee_ext: { left: 4, right: 5 },
+              ankle_flex: { left: 3, right: 5 }
             },
-            joa_back: {
-              total: 12, symptoms: 3, findings: 4, adl_back: 5
+            mmt: {
+              shoulder_flex: { left: 3, right: 5 },
+              shoulder_ext: { left: 3, right: 5 },
+              shoulder_abd: { left: 3, right: 5 },
+              elbow_flex: { left: 3, right: 5 },
+              elbow_ext: { left: 3, right: 5 },
+              wrist_flex: { left: 3, right: 5 },
+              wrist_ext: { left: 3, right: 5 },
+              hip_flex: { left: 3, right: 5 },
+              hip_ext: { left: 3, right: 5 },
+              knee_flex: { left: 4, right: 5 },
+              knee_ext: { left: 4, right: 5 },
+              ankle_flex: { left: 3, right: 5 },
+              ankle_ext: { left: 3, right: 5 }
             },
-            slr: 1,
-            fnst: 0,
-            kemp: 1,
-            bragard: 1
+            ss5: { time: 16.5 },
+            cs30: { count: 8 }
           }
         },
         {
           date: "2026-06-15",
           evaluator: "A.B",
           evaluations: {
+            basic_info: { height: 170.0, weight: 64.5, bmi: 22.3 },
             bbs: {
               total: 40,
               q1: 4, q2: 3, q3: 4, q4: 3, q5: 3, q6: 3, q7: 3, q8: 3, q9: 2, q10: 3, q11: 3, q12: 2, q13: 2, q14: 2
@@ -3746,25 +3773,44 @@ function getDemoData() {
               chase_left: 1, chase_right: 2, nose_left: 1, nose_right: 2,
               rotation_left: 2, rotation_right: 2, shin_left: 2, shin_right: 3
             },
-            joa_hip: {
-              total: 65, pain: 25, rom: 15, walking: 15, adl: 10
+            frt: { reach: 18 },
+            minibest: {
+              total: 18, sec_anticipatory: 4, sec_reactive: 4, sec_sensory: 5, sec_gait: 5,
+              q1: 2, q2: 1, q3: 1, q4: 1, q5: 2, q6: 1, q7: 2, q8: 2, q9: 1, q10: 2, q11: 1, q12: 1, q13: 1, q14: 0
             },
-            joa_knee: {
-              total: 65, pain_walking: 20, stairs: 15, rom_limitation: 25, swelling: 5
+            mrc: {
+              total: 48,
+              shoulder_abd: { left: 4, right: 5 },
+              elbow_flex: { left: 4, right: 5 },
+              wrist_ext: { left: 3, right: 5 },
+              hip_flex: { left: 4, right: 5 },
+              knee_ext: { left: 5, right: 5 },
+              ankle_flex: { left: 4, right: 5 }
             },
-            joa_back: {
-              total: 20, symptoms: 5, findings: 5, adl_back: 10
+            mmt: {
+              shoulder_flex: { left: 4, right: 5 },
+              shoulder_ext: { left: 4, right: 5 },
+              shoulder_abd: { left: 4, right: 5 },
+              elbow_flex: { left: 4, right: 5 },
+              elbow_ext: { left: 4, right: 5 },
+              wrist_flex: { left: 4, right: 5 },
+              wrist_ext: { left: 4, right: 5 },
+              hip_flex: { left: 4, right: 5 },
+              hip_ext: { left: 4, right: 5 },
+              knee_flex: { left: 5, right: 5 },
+              knee_ext: { left: 5, right: 5 },
+              ankle_flex: { left: 4, right: 5 },
+              ankle_ext: { left: 4, right: 5 }
             },
-            slr: 1,
-            fnst: 0,
-            kemp: 0,
-            bragard: 0
+            ss5: { time: 13.2 },
+            cs30: { count: 12 }
           }
         },
         {
           date: "2026-07-12",
           evaluator: "A.B",
           evaluations: {
+            basic_info: { height: 170.0, weight: 64.0, bmi: 22.1 },
             bbs: {
               total: 48,
               q1: 4, q2: 4, q3: 4, q4: 4, q5: 4, q6: 4, q7: 4, q8: 3, q9: 3, q10: 3, q11: 3, q12: 3, q13: 3, q14: 2
@@ -3882,20 +3928,158 @@ function getDemoData() {
               chase_left: 0, chase_right: 1, nose_left: 0, nose_right: 1,
               rotation_left: 1, rotation_right: 1, shin_left: 0, shin_right: 1
             },
-            joa_shoulder: {
-              total: 80, pain: 25, rom: 20, function: 15, support: 10, xray: 10
+            frt: { reach: 24 },
+            minibest: {
+              total: 24, sec_anticipatory: 5, sec_reactive: 5, sec_sensory: 6, sec_gait: 8,
+              q1: 2, q2: 2, q3: 1, q4: 2, q5: 2, q6: 1, q7: 2, q8: 2, q9: 2, q10: 2, q11: 2, q12: 2, q13: 2, q14: 0
             },
+            mrc: {
+              total: 58,
+              shoulder_abd: { left: 5, right: 5 },
+              elbow_flex: { left: 5, right: 5 },
+              wrist_ext: { left: 4, right: 5 },
+              hip_flex: { left: 5, right: 5 },
+              knee_ext: { left: 5, right: 5 },
+              ankle_flex: { left: 4, right: 5 }
+            },
+            mmt: {
+              shoulder_flex: { left: 5, right: 5 },
+              shoulder_ext: { left: 5, right: 5 },
+              shoulder_abd: { left: 5, right: 5 },
+              elbow_flex: { left: 5, right: 5 },
+              elbow_ext: { left: 5, right: 5 },
+              wrist_flex: { left: 5, right: 5 },
+              wrist_ext: { left: 5, right: 5 },
+              hip_flex: { left: 5, right: 5 },
+              hip_ext: { left: 5, right: 5 },
+              knee_flex: { left: 5, right: 5 },
+              knee_ext: { left: 5, right: 5 },
+              ankle_flex: { left: 5, right: 5 },
+              ankle_ext: { left: 5, right: 5 }
+            },
+            ss5: { time: 10.5 },
+            cs30: { count: 15 }
+          }
+        }
+      ]
+    },
+    {
+      id: "サンプルB",
+      age: 65,
+      gender: "女性",
+      diagnosis: "右大腿骨頚部骨折 / 変形性膝関節症 / 腰痛症",
+      memo: "術後1ヶ月。整形外科系評価、および一般評価（基本情報, WBI, ROM, 筋力, バランス, 歩行, ADL）の時系列記録例を網羅しています。全荷重歩行訓練中。",
+      records: [
+        {
+          date: "2026-06-20",
+          evaluator: "C.D",
+          evaluations: {
+            basic_info: { height: 160.0, weight: 55.0, bmi: 21.5 },
+            knee_extension: { left: 25.0, right: 12.0, wbi_left: 45.5, wbi_right: 21.8 },
+            grip_strength: { left: 20.0, right: 18.0 },
+            rom: {
+              hip_flex: { left: 100, right: 85 },
+              hip_ext: { left: 10, right: 5 },
+              knee_flex: { left: 125, right: 105 },
+              knee_ext: { left: 0, right: -5 },
+              ankle_flex: { left: 15, right: 10 },
+              ankle_ext: { left: 35, right: 30 }
+            },
+            walk_10m: { time: 16.5, steps: 28, speed: 36.4, stride: 35.7 },
+            walk_6min: { distance: 180, borg_before: 9, borg_after: 15 },
+            tug: { time: 22.4 },
+            frt: { reach: 14 },
+            minibest: {
+              total: 12, sec_anticipatory: 3, sec_reactive: 3, sec_sensory: 3, sec_gait: 3,
+              q1: 1, q2: 1, q3: 1, q4: 1, q5: 1, q6: 1, q7: 1, q8: 1, q9: 1, q10: 1, q11: 1, q12: 1, q13: 0, q14: 0
+            },
+            mrc: {
+              total: 42,
+              hip_flex: { left: 4, right: 3 },
+              knee_ext: { left: 4, right: 3 },
+              ankle_flex: { left: 4, right: 4 },
+              shoulder_abd: { left: 5, right: 5 },
+              elbow_flex: { left: 5, right: 5 },
+              wrist_ext: { left: 5, right: 4 }
+            },
+            mmt: {
+              hip_flex: { left: 4, right: 3 },
+              hip_ext: { left: 4, right: 3 },
+              knee_flex: { left: 4, right: 3 },
+              knee_ext: { left: 4, right: 3 },
+              ankle_flex: { left: 4, right: 4 },
+              ankle_ext: { left: 4, right: 4 }
+            },
+            ss5: { time: 18.2 },
+            cs30: { count: 9 },
+            bi: {
+              total: 65,
+              feeding: 10, bathing: 0, grooming: 5, dressing: 5, bowels: 10, bladder: 10, toilet: 5, transfer: 10, mobility: 10, stairs: 0
+            },
+            joa_hip: { total: 45, pain: 15, rom: 10, walking: 10, adl: 10 },
+            joa_knee: { total: 40, pain_walking: 10, stairs: 10, rom_limitation: 15, swelling: 5 },
+            joa_back: { total: 12, symptoms: 3, findings: 4, adl_back: 5 },
+            joa_shoulder: { total: 40, pain: 10, rom: 10, function: 10, support: 5, xray: 5 },
+            neer_test: { score: 1 },
+            empty_can_test: { score: 1 },
+            slr: 1,
+            fnst: 0,
+            kemp: 1,
+            bragard: 1
+          }
+        },
+        {
+          date: "2026-07-10",
+          evaluator: "C.D",
+          evaluations: {
+            basic_info: { height: 160.0, weight: 54.2, bmi: 21.2 },
+            knee_extension: { left: 26.5, right: 19.0, wbi_left: 48.9, wbi_right: 35.1 },
+            grip_strength: { left: 21.0, right: 19.5 },
+            rom: {
+              hip_flex: { left: 115, right: 105 },
+              hip_ext: { left: 12, right: 10 },
+              knee_flex: { left: 130, right: 120 },
+              knee_ext: { left: 0, right: 0 },
+              ankle_flex: { left: 18, right: 15 },
+              ankle_ext: { left: 40, right: 35 }
+            },
+            walk_10m: { time: 11.2, steps: 21, speed: 53.5, stride: 47.6 },
+            walk_6min: { distance: 265, borg_before: 8, borg_after: 12 },
+            tug: { time: 14.8 },
+            frt: { reach: 22 },
+            minibest: {
+              total: 20, sec_anticipatory: 5, sec_reactive: 5, sec_sensory: 5, sec_gait: 5,
+              q1: 2, q2: 2, q3: 1, q4: 2, q5: 2, q6: 1, q7: 2, q8: 2, q9: 1, q10: 2, q11: 1, q12: 1, q13: 1, q14: 0
+            },
+            mrc: {
+              total: 52,
+              hip_flex: { left: 5, right: 4 },
+              knee_ext: { left: 5, right: 4 },
+              ankle_flex: { left: 5, right: 5 },
+              shoulder_abd: { left: 5, right: 5 },
+              elbow_flex: { left: 5, right: 5 },
+              wrist_ext: { left: 5, right: 5 }
+            },
+            mmt: {
+              hip_flex: { left: 5, right: 4 },
+              hip_ext: { left: 5, right: 4 },
+              knee_flex: { left: 5, right: 4 },
+              knee_ext: { left: 5, right: 4 },
+              ankle_flex: { left: 5, right: 5 },
+              ankle_ext: { left: 5, right: 5 }
+            },
+            ss5: { time: 12.1 },
+            cs30: { count: 13 },
+            bi: {
+              total: 85,
+              feeding: 10, bathing: 5, grooming: 5, dressing: 10, bowels: 10, bladder: 10, toilet: 10, transfer: 15, mobility: 10, stairs: 10
+            },
+            joa_hip: { total: 90, pain: 35, rom: 20, walking: 20, adl: 15 },
+            joa_knee: { total: 90, pain_walking: 30, stairs: 20, rom_limitation: 30, swelling: 10 },
+            joa_back: { total: 27, symptoms: 7, findings: 6, adl_back: 14 },
+            joa_shoulder: { total: 80, pain: 25, rom: 20, function: 15, support: 10, xray: 10 },
             neer_test: { score: 0 },
             empty_can_test: { score: 0 },
-            joa_hip: {
-              total: 90, pain: 35, rom: 20, walking: 20, adl: 15
-            },
-            joa_knee: {
-              total: 90, pain_walking: 30, stairs: 20, rom_limitation: 30, swelling: 10
-            },
-            joa_back: {
-              total: 27, symptoms: 7, findings: 6, adl_back: 14
-            },
             slr: 0,
             fnst: 0,
             kemp: 0,
@@ -3903,44 +4087,9 @@ function getDemoData() {
           }
         }
       ]
-    },
-    {
-      id: "P002",
-      age: 65,
-      gender: "女性",
-      diagnosis: "右大腿骨頚部骨折",
-      memo: "人工骨頭挿入術後。TUG、握力、膝伸展筋力、6分間歩行を測定。免荷終了し、現在全荷重歩行訓練中。",
-      records: [
-        {
-          date: "2026-06-20",
-          evaluator: "C.D",
-          evaluations: {
-            knee_extension: { left: 25.0, right: 12.0 },
-            grip_strength: { left: 20.0, right: 18.0 },
-            tug: { time: 22.4 },
-            walk_6min: { distance: 180, borg_before: 9, borg_after: 15 }
-          }
-        },
-        {
-          date: "2026-07-10",
-          evaluator: "C.D",
-          evaluations: {
-            knee_extension: { left: 26.5, right: 19.0 },
-            grip_strength: { left: 21.0, right: 19.5 },
-            tug: { time: 14.8 },
-            walk_6min: { distance: 265, borg_before: 8, borg_after: 12 }
-          }
-        }
-      ]
     }
   ];
 }
-
-// -------------------------------------------------------------
-// プレミアムプラン (アプリ内課金 & 広告制御) ロジック
-// -------------------------------------------------------------
-
-// プレミアムステータスの読み込みと適用
 function initPremiumStatus() {
   const isPremium = localStorage.getItem("premium_unlocked") === "true";
   if (isPremium) {
