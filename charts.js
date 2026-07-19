@@ -16,6 +16,13 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
 
+  // 特定の合計点がない項目に対するサブ項目のフォールバック
+  let activeSubItemId = subItemId;
+  if (evalId === "basic_info" && activeSubItemId === "total") activeSubItemId = "bmi";
+  else if (evalId === "frt" && activeSubItemId === "total") activeSubItemId = "reach";
+  else if (evalId === "ss5" && activeSubItemId === "total") activeSubItemId = "time";
+  else if (evalId === "cs30" && activeSubItemId === "total") activeSubItemId = "count";
+
   // 既存のチャートを破棄
   if (activeChart) {
     activeChart.destroy();
@@ -50,11 +57,11 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   const evalName = evalMeta ? evalMeta.name : evalId;
 
   // 1. ROM（関節可動域）または Bilateral_numeric（膝伸展筋力・握力）の場合（左右別描画）
-  if (evalMeta && (evalMeta.inputType === "rom" || evalMeta.inputType === "bilateral_numeric")) {
-    let subItemKey = subItemId;
+  if (evalMeta && (evalMeta.inputType === "rom" || evalMeta.inputType === "bilateral_numeric" || evalMeta.inputType === "knee_wbi_calc" || evalMeta.inputType === "mrc_custom" || evalMeta.inputType === "mmt_custom")) {
+    let subItemKey = activeSubItemId;
     
     // ROMで subItemId が total 等で初期化されている場合は、デフォルトで最初のサブ項目を設定
-    if (evalMeta.inputType === "rom" && (subItemId === "total" || !subItemsExist(evalMeta, subItemId))) {
+    if (evalMeta.inputType === "rom" && (activeSubItemId === "total" || !subItemsExist(evalMeta, activeSubItemId))) {
       subItemKey = Object.keys(evalMeta.subItems)[0]; // デフォルトは肩関節屈曲
     }
 
@@ -125,8 +132,8 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   } 
   // 2. 10m歩行テストの場合
   else if (evalId === "walk_10m") {
-    let subItemKey = subItemId;
-    if (subItemId === "total" || subItemId === "speed") {
+    let subItemKey = activeSubItemId;
+    if (activeSubItemId === "total" || activeSubItemId === "speed") {
       subItemKey = "speed"; // デフォルトは歩行速度
     }
 
@@ -148,8 +155,8 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   }
   // 3. Brunsnstrom Stage の場合 (I〜VI を 1〜6 にマッピング)
   else if (evalId === "brs") {
-    let subItemKey = subItemId;
-    if (subItemId === "total") {
+    let subItemKey = activeSubItemId;
+    if (activeSubItemId === "total") {
       subItemKey = "arm"; // デフォルトは上肢
     }
 
@@ -196,7 +203,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   }
   // 5. 6分間歩行テストの場合
   else if (evalId === "walk_6min") {
-    let subItemKey = subItemId === "total" ? "distance" : subItemId;
+    let subItemKey = activeSubItemId === "total" ? "distance" : activeSubItemId;
     const itemLabel = evalMeta.subItems[subItemKey] ? evalMeta.subItems[subItemKey].name : subItemKey;
     const dataVals = chartDataPoints.map(p => p.data[subItemKey] !== undefined ? Number(p.data[subItemKey]) : null);
 
@@ -213,7 +220,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   }
   // 5-2. STEF の場合
   else if (evalId === "stef") {
-    const isTotal = subItemId === "total" || subItemId === "left_total" || subItemId === "right_total" || !subItemId;
+    const isTotal = activeSubItemId === "total" || activeSubItemId === "left_total" || activeSubItemId === "right_total" || !activeSubItemId;
     const leftData = [];
     const rightData = [];
 
@@ -222,7 +229,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
         leftData.push(p.data.left_total !== undefined ? Number(p.data.left_total) : null);
         rightData.push(p.data.right_total !== undefined ? Number(p.data.right_total) : null);
       } else {
-        const itemVal = p.data[subItemId];
+        const itemVal = p.data[activeSubItemId];
         if (itemVal) {
           leftData.push(itemVal.time_left !== undefined ? Number(itemVal.time_left) : null);
           rightData.push(itemVal.time_right !== undefined ? Number(itemVal.time_right) : null);
@@ -233,7 +240,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
       }
     });
 
-    const itemLabel = isTotal ? "合計点" : (evalMeta.subItems[subItemId] ? evalMeta.subItems[subItemId].name : subItemId);
+    const itemLabel = isTotal ? "合計点" : (evalMeta.subItems[activeSubItemId] ? evalMeta.subItems[activeSubItemId].name : activeSubItemId);
     const unit = isTotal ? "点" : "秒";
 
     datasets.push({
@@ -260,7 +267,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   }
   // 5-3. MAL の場合
   else if (evalId === "mal") {
-    const isTotal = subItemId === "total" || subItemId === "aou_mean" || subItemId === "qom_mean" || !subItemId;
+    const isTotal = activeSubItemId === "total" || activeSubItemId === "aou_mean" || activeSubItemId === "qom_mean" || !activeSubItemId;
     const aouData = [];
     const qomData = [];
 
@@ -269,7 +276,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
         aouData.push(p.data.aou_mean !== undefined ? Number(p.data.aou_mean) : null);
         qomData.push(p.data.qom_mean !== undefined ? Number(p.data.qom_mean) : null);
       } else {
-        const itemVal = p.data[subItemId];
+        const itemVal = p.data[activeSubItemId];
         if (itemVal) {
           aouData.push(itemVal.aou !== undefined ? Number(itemVal.aou) : null);
           qomData.push(itemVal.qom !== undefined ? Number(itemVal.qom) : null);
@@ -280,7 +287,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
       }
     });
 
-    const itemLabel = isTotal ? "平均値" : (evalMeta.actions.find(a => a.id === subItemId)?.name || subItemId);
+    const itemLabel = isTotal ? "平均値" : (evalMeta.actions.find(a => a.id === activeSubItemId)?.name || activeSubItemId);
 
     datasets.push({
       label: `AOU (使用頻度) - ${itemLabel}`,
@@ -306,18 +313,18 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
   }
   // 6. 一般的な多項目評価（BBS, FMA, SIAS, SCP, TIS, TCT など）
   else {
-    const isTotal = subItemId === "total" || !subItemId;
+    const isTotal = activeSubItemId === "total" || !activeSubItemId;
     const dataVals = [];
 
     chartDataPoints.forEach(p => {
       if (isTotal) {
         dataVals.push(p.data.total !== undefined ? Number(p.data.total) : null);
       } else {
-        dataVals.push(p.data[subItemId] !== undefined ? Number(p.data[subItemId]) : null);
+        dataVals.push(p.data[activeSubItemId] !== undefined ? Number(p.data[activeSubItemId]) : null);
       }
     });
 
-    const itemLabel = isTotal ? "合計点" : (evalMeta.subItems[subItemId] ? evalMeta.subItems[subItemId].name : subItemId);
+    const itemLabel = isTotal ? "合計点" : (evalMeta.subItems[activeSubItemId] ? evalMeta.subItems[activeSubItemId].name : activeSubItemId);
     const unit = isTotal ? "点" : "点";
 
     datasets.push({
@@ -369,7 +376,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
               } else {
                 label += context.parsed.y;
                 // 単位を追加
-                const unit = getUnitForEvaluation(evalId, subItemId);
+                const unit = getUnitForEvaluation(evalId, activeSubItemId);
                 if (unit) label += ` ${unit}`;
               }
             }
@@ -442,7 +449,7 @@ function formatDateString(dateStr) {
 /**
  * 補助関数: 指定した下位項目が定義に含まれるかチェック
  */
-function subItemsExist(evalMeta, subItemId) {
+function subItemsExist(evalMeta, activeSubItemId) {
   return evalMeta && evalMeta.subItems && evalMeta.subItems[subItemId] !== undefined;
 }
 
@@ -461,7 +468,7 @@ function getCustomEvalMeta(evalId) {
 /**
  * 補助関数: 単位の取得
  */
-function getUnitForEvaluation(evalId, subItemId) {
+function getUnitForEvaluation(evalId, activeSubItemId) {
   const preset = PRESET_EVALUATIONS[evalId];
   if (preset) {
     if (preset.subItems && preset.subItems[subItemId] && preset.subItems[subItemId].unit !== undefined) {

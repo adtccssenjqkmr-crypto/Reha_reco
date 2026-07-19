@@ -625,9 +625,8 @@ function updateChartSubitemDropdown(evalId) {
     optTotal.textContent = "測定時間 (秒)";
   } else if (meta.inputType === "single_select") {
     optTotal.textContent = "総合スコア";
-  } else if (meta.inputType === "rom") {
-    // ROMは合計点がないので、サブ項目を羅列する
-    optTotal.style.display = "none"; 
+  } else if (meta.inputType === "rom" || meta.inputType === "mrc_custom" || meta.inputType === "mmt_custom") {
+    optTotal.style.display = "none";
   } else {
     optTotal.textContent = "合計点 / 総合値";
   }
@@ -656,8 +655,16 @@ function updateChartSubitemDropdown(evalId) {
   }
 
   // ROMの場合は、最初の関節部位をデフォルトにする
-  if (meta.inputType === "rom") {
+  if (meta.inputType === "rom" || meta.inputType === "mrc_custom" || meta.inputType === "mmt_custom") {
     subSelect.value = Object.keys(meta.subItems)[0];
+  } else if (evalId === "basic_info") {
+    subSelect.value = "bmi";
+  } else if (evalId === "frt") {
+    subSelect.value = "reach";
+  } else if (evalId === "ss5") {
+    subSelect.value = "time";
+  } else if (evalId === "cs30") {
+    subSelect.value = "count";
   } else {
     subSelect.value = "total";
   }
@@ -804,32 +811,33 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
     // 複数スケール (multi_scale) または ROM の場合
     const subItemKeys = Object.keys(meta.subItems || {}).filter(k => k !== "total");
     
-    if (meta.inputType === "rom") {
-      subItemKeys.forEach(k => {
-        const sideVal = evalData[k];
-        const item = document.createElement("div");
-        item.className = "eval-detail-item";
-
-        const itemHeader = document.createElement("div");
-        itemHeader.className = "eval-detail-item-header";
-
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "eval-detail-item-name";
-        nameSpan.textContent = meta.subItems[k].name;
-
-        const valSpan = document.createElement("span");
-        valSpan.className = "eval-detail-item-val";
-        
-        let leftText = sideVal && sideVal.left !== undefined ? `左: ${sideVal.left}°` : "左: --";
-        let rightText = sideVal && sideVal.right !== undefined ? `右: ${sideVal.right}°` : "右: --";
-        valSpan.textContent = `${leftText} / ${rightText}`;
-
-        itemHeader.appendChild(nameSpan);
-        itemHeader.appendChild(valSpan);
-        item.appendChild(itemHeader);
-        grid.appendChild(item);
-      });
-    } else {
+    if (meta.inputType === "rom" || meta.inputType === "mrc_custom" || meta.inputType === "mmt_custom") {
+        subItemKeys.forEach(k => {
+          const sideVal = evalData[k];
+          const item = document.createElement("div");
+          item.className = "eval-detail-item";
+          
+          const itemHeader = document.createElement("div");
+          itemHeader.className = "eval-detail-item-header";
+          
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "eval-detail-item-name";
+          nameSpan.textContent = meta.subItems[k].name;
+          
+          const valSpan = document.createElement("span");
+          valSpan.className = "eval-detail-item-val";
+          
+          const suffix = meta.inputType === "rom" ? "°" : "";
+          let leftText = (sideVal && sideVal.left !== undefined && sideVal.left !== null) ? `左: ${sideVal.left}${suffix}` : "左: --";
+          let rightText = (sideVal && sideVal.right !== undefined && sideVal.right !== null) ? `右: ${sideVal.right}${suffix}` : "右: --";
+          valSpan.textContent = `${leftText} / ${rightText}`;
+          
+          itemHeader.appendChild(nameSpan);
+          itemHeader.appendChild(valSpan);
+          item.appendChild(itemHeader);
+          grid.appendChild(item);
+        });
+      } else {
       const itemsConfig = meta.items || [];
       
       subItemKeys.forEach(k => {
@@ -1125,18 +1133,21 @@ function showHistoryDetail(recordIndex) {
  
       scoreHTML += itemsListHTML + subTotalsHTML;
 
-    } else if (meta && meta.inputType === "rom") {
-      scoreHTML = `<div style="font-weight: 700; color: var(--accent-purple); margin-bottom: 6px;">${evalName}</div>`;
-      const romLines = Object.keys(evalData).map(k => {
-        const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
-        const leftVal = evalData[k].left !== undefined ? `${evalData[k].left}°` : "--";
-        const rightVal = evalData[k].right !== undefined ? `${evalData[k].right}°` : "--";
-        return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 320px;">
-          <span>・${itemMeta}</span>
-          <span style="font-family: var(--font-title);">左: <span style="color:var(--accent-blue);">${leftVal}</span> / 右: <span style="color:var(--accent-purple);">${rightVal}</span></span>
-        </div>`;
-      }).join("");
-      scoreHTML += romLines;
+    } else if (meta && (meta.inputType === "rom" || meta.inputType === "mrc_custom" || meta.inputType === "mmt_custom")) {
+    const isRom = meta.inputType === "rom";
+    const suffix = isRom ? "°" : "";
+    scoreHTML = `<div style="font-weight: 700; color: var(--accent-purple); margin-bottom: 6px;">${evalName}</div>`;
+    const romLines = Object.keys(evalData).map(k => {
+      if (k === "total") return "";
+      const itemMeta = meta.subItems[k] ? meta.subItems[k].name : k;
+      const leftVal = (evalData[k] && evalData[k].left !== undefined && evalData[k].left !== null) ? `${evalData[k].left}${suffix}` : "--";
+      const rightVal = (evalData[k] && evalData[k].right !== undefined && evalData[k].right !== null) ? `${evalData[k].right}${suffix}` : "--";
+      return `<div style="font-size: 13px; color: var(--text-secondary); margin-left: 12px; display: flex; justify-content: space-between; max-width: 320px;">
+        <span>・${itemMeta}</span>
+        <span style="font-family: var(--font-title);">左: <span style="color:var(--accent-blue);">${leftVal}</span> / 右: <span style="color:var(--accent-purple);">${rightVal}</span></span>
+      </div>`;
+    }).join("");
+    scoreHTML += romLines;
 
     } else if (meta && meta.inputType === "bilateral_numeric") {
       const leftVal = evalData.left !== undefined ? `${evalData.left} ${meta.unit || ''}` : "--";
@@ -1318,6 +1329,67 @@ function restoreFormData(evalsData) {
         });
         recalculateMultiScaleTotal(evalId, meta);
       }
+    }
+    else if (meta.inputType === "basic_info_calc") {
+      const hInput = document.getElementById(`${evalId}_height`);
+      const wInput = document.getElementById(`${evalId}_weight`);
+      const bHidden = document.getElementById(`${evalId}_bmi_hidden`);
+      const bVal = document.getElementById(`${evalId}_bmi_computed`);
+      const bStatus = document.getElementById(`${evalId}_bmi_status`);
+
+      if (hInput && data.height !== null) hInput.value = data.height;
+      if (wInput && data.weight !== null) wInput.value = data.weight;
+      if (bHidden && data.bmi !== null) {
+        bHidden.value = data.bmi;
+        if (bVal) bVal.textContent = data.bmi;
+        if (bStatus) {
+          const bmiNum = parseFloat(data.bmi);
+          if (bmiNum < 18.5) bStatus.textContent = "判定: 低体重（痩せ型）";
+          else if (bmiNum < 25.0) bStatus.textContent = "判定: 普通体重";
+          else bStatus.textContent = "判定: 肥満";
+        }
+      }
+    }
+    else if (meta.inputType === "knee_wbi_calc") {
+      const lInput = document.getElementById(`${evalId}_left`);
+      const rInput = document.getElementById(`${evalId}_right`);
+      const wlHidden = document.getElementById(`${evalId}_wbi_left_hidden`);
+      const wrHidden = document.getElementById(`${evalId}_wbi_right_hidden`);
+      const wlVal = document.getElementById(`${evalId}_wbi_left_val`);
+      const wrVal = document.getElementById(`${evalId}_wbi_right_val`);
+
+      if (lInput && data.left !== null) lInput.value = data.left;
+      if (rInput && data.right !== null) rInput.value = data.right;
+      if (wlHidden && data.wbi_left !== null) {
+        wlHidden.value = data.wbi_left;
+        if (wlVal) wlVal.textContent = data.wbi_left;
+      }
+      if (wrHidden && data.wbi_right !== null) {
+        wrHidden.value = data.wbi_right;
+        if (wrVal) wrVal.textContent = data.wbi_right;
+      }
+    }
+    else if (meta.inputType === "mrc_custom") {
+      meta.items.forEach(item => {
+        const val = data[item.id];
+        if (val) {
+          const lSelect = document.querySelector(`select[name="${evalId}_${item.id}_left"]`);
+          const rSelect = document.querySelector(`select[name="${evalId}_${item.id}_right"]`);
+          if (lSelect && val.left !== null) lSelect.value = val.left;
+          if (rSelect && val.right !== null) rSelect.value = val.right;
+        }
+      });
+    }
+    else if (meta.inputType === "mmt_custom") {
+      Object.keys(meta.subItems).forEach(key => {
+        const val = data[key];
+        if (val) {
+          const lSelect = document.querySelector(`select[name="${evalId}_${key}_left"]`);
+          const rSelect = document.querySelector(`select[name="${evalId}_${key}_right"]`);
+          if (lSelect && val.left !== null) lSelect.value = val.left;
+          if (rSelect && val.right !== null) rSelect.value = val.right;
+        }
+      });
     }
     else if (meta.inputType === "rom") {
       Object.keys(meta.subItems).forEach(key => {
@@ -1904,6 +1976,239 @@ function buildInputFormUI(section, evalId, meta) {
       container.appendChild(itemEl);
     });
   } 
+  // N1. 基本情報（身長・体重・BMI）
+  else if (meta.inputType === "basic_info_calc") {
+    container.innerHTML = `
+      <div class="walk-10m-grid">
+        <div class="form-group">
+          <label>身長 (cm)</label>
+          <input type="number" step="0.1" name="${evalId}_height" id="${evalId}_height" class="form-control" placeholder="cm" required>
+        </div>
+        <div class="form-group">
+          <label>体重 (kg)</label>
+          <input type="number" step="0.1" name="${evalId}_weight" id="${evalId}_weight" class="form-control" placeholder="kg" required>
+        </div>
+      </div>
+      <div class="computed-output-box" style="margin-top: 10px;">
+        <input type="hidden" name="${evalId}_bmi" id="${evalId}_bmi_hidden">
+        <div>BMI (自動計算): <span class="computed-val" id="${evalId}_bmi_computed">--</span></div>
+        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;" id="${evalId}_bmi_status">--</div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const heightInput = document.getElementById(`${evalId}_height`);
+      const weightInput = document.getElementById(`${evalId}_weight`);
+      const bmiVal = document.getElementById(`${evalId}_bmi_computed`);
+      const bmiHidden = document.getElementById(`${evalId}_bmi_hidden`);
+      const bmiStatus = document.getElementById(`${evalId}_bmi_status`);
+
+      const calc = () => {
+        const h = parseFloat(heightInput.value);
+        const w = parseFloat(weightInput.value);
+        if (h > 0 && w > 0) {
+          const bmi = (w / ((h / 100) ** 2)).toFixed(1);
+          bmiVal.textContent = bmi;
+          bmiHidden.value = bmi;
+          
+          const bmiNum = parseFloat(bmi);
+          let statusText = "";
+          if (bmiNum < 18.5) {
+            statusText = "判定: 低体重（痩せ型）";
+          } else if (bmiNum < 25.0) {
+            statusText = "判定: 普通体重";
+          } else {
+            statusText = "判定: 肥満";
+          }
+          bmiStatus.textContent = statusText;
+        } else {
+          bmiVal.textContent = "--";
+          bmiHidden.value = "";
+          bmiStatus.textContent = "--";
+        }
+      };
+
+      heightInput.addEventListener("input", calc);
+      weightInput.addEventListener("input", calc);
+    }, 100);
+  }
+  // N2. 膝伸展筋力 & WBI（最新の体重データから自動計算）
+  else if (meta.inputType === "knee_wbi_calc") {
+    let currentWeight = null;
+    const pIndex = state.currentPatientIndex;
+    if (pIndex >= 0 && state.patients[pIndex] && state.patients[pIndex].records) {
+      const sorted = [...state.patients[pIndex].records].sort((a, b) => new Date(b.date) - new Date(a.date));
+      for (const r of sorted) {
+        if (r.evaluations && r.evaluations.basic_info && r.evaluations.basic_info.weight) {
+          currentWeight = parseFloat(r.evaluations.basic_info.weight);
+          break;
+        }
+      }
+    }
+
+    const weightStatusText = currentWeight 
+      ? `（基準体重: ${currentWeight} kg）` 
+      : `（※基本情報に体重が登録されていないため、WBIは計算されません）`;
+
+    container.innerHTML = `
+      <div class="rom-side-container" style="margin-top:0; margin-bottom: 10px;">
+        <div class="rom-side-box left">
+          <div class="rom-side-title">左 (kgf)</div>
+          <input type="number" step="0.1" name="${evalId}_left" id="${evalId}_left" class="form-control" placeholder="数値" required>
+        </div>
+        <div class="rom-side-box right">
+          <div class="rom-side-title">右 (kgf)</div>
+          <input type="number" step="0.1" name="${evalId}_right" id="${evalId}_right" class="form-control" placeholder="数値" required>
+        </div>
+      </div>
+      <div class="computed-output-box">
+        <input type="hidden" name="${evalId}_wbi_left" id="${evalId}_wbi_left_hidden">
+        <input type="hidden" name="${evalId}_wbi_right" id="${evalId}_wbi_right_hidden">
+        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 5px;">${weightStatusText}</div>
+        <div>左 WBI: <span class="computed-val" id="${evalId}_wbi_left_val">--</span> %</div>
+        <div>右 WBI: <span class="computed-val" id="${evalId}_wbi_right_val">--</span> %</div>
+        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;" id="${evalId}_wbi_interpretation"></div>
+      </div>
+    `;
+
+    if (currentWeight) {
+      setTimeout(() => {
+        const leftInput = document.getElementById(`${evalId}_left`);
+        const rightInput = document.getElementById(`${evalId}_right`);
+        
+        const wbiLeftVal = document.getElementById(`${evalId}_wbi_left_val`);
+        const wbiRightVal = document.getElementById(`${evalId}_wbi_right_val`);
+        const wbiLeftHidden = document.getElementById(`${evalId}_wbi_left_hidden`);
+        const wbiRightHidden = document.getElementById(`${evalId}_wbi_right_hidden`);
+        const interpretation = document.getElementById(`${evalId}_wbi_interpretation`);
+
+        const calc = () => {
+          const lVal = parseFloat(leftInput.value);
+          const rVal = parseFloat(rightInput.value);
+          
+          let lWbi = null;
+          let rWbi = null;
+
+          if (lVal > 0) {
+            lWbi = ((lVal / currentWeight) * 100).toFixed(1);
+            wbiLeftVal.textContent = lWbi;
+            wbiLeftHidden.value = lWbi;
+          } else {
+            wbiLeftVal.textContent = "--";
+            wbiLeftHidden.value = "";
+          }
+
+          if (rVal > 0) {
+            rWbi = ((rVal / currentWeight) * 100).toFixed(1);
+            wbiRightVal.textContent = rWbi;
+            wbiRightHidden.value = rWbi;
+          } else {
+            wbiRightVal.textContent = "--";
+            wbiRightHidden.value = "";
+          }
+
+          if (lWbi || rWbi) {
+            const maxWbi = Math.max(parseFloat(lWbi || 0), parseFloat(rWbi || 0));
+            let interpretationText = "【WBIの目安】<br>";
+            if (maxWbi >= 80) {
+              interpretationText += "・80%以上：安定した走行・跳躍が可能レベル";
+            } else if (maxWbi >= 60) {
+              interpretationText += "・60%以上：実用的な独歩が可能レベル";
+            } else if (maxWbi >= 40) {
+              interpretationText += "・40%〜60%：杖歩行または見守り歩行レベル";
+            } else {
+              interpretationText += "・40%未満：歩行困難（車椅子レベル）のリスクが高いです。";
+            }
+            interpretation.innerHTML = interpretationText;
+          } else {
+            interpretation.innerHTML = "";
+          }
+        };
+
+        leftInput.addEventListener("input", calc);
+        rightInput.addEventListener("input", calc);
+      }, 100);
+    }
+  }
+  // N3. MRC スコア (左右別・セレクトボックス選択式)
+  else if (meta.inputType === "mrc_custom") {
+    container.innerHTML = `
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">
+        ※各関節の主要動作について、0（完全麻痺）〜5（正常）で採点します。
+      </div>
+    `;
+
+    meta.items.forEach(item => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "stef-item-row";
+      itemEl.style.display = "flex";
+      itemEl.style.flexDirection = "column";
+      itemEl.style.marginBottom = "12px";
+      itemEl.style.borderBottom = "1px solid var(--border-color)";
+      itemEl.style.paddingBottom = "8px";
+
+      itemEl.innerHTML = `
+        <div style="font-weight:bold; font-size:13px; margin-bottom:4px;">${item.name}</div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label style="font-size:11px; color:var(--text-secondary);">左</label>
+            <select name="${evalId}_${item.id}_left" class="form-control" required>
+              <option value="">選択...</option>
+              ${meta.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:11px; color:var(--text-secondary);">右</label>
+            <select name="${evalId}_${item.id}_right" class="form-control" required>
+              <option value="">選択...</option>
+              ${meta.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+      `;
+      container.appendChild(itemEl);
+    });
+  }
+  // N4. MMT 徒手筋力テスト (ROMの全運動方向と完全に一致した項目)
+  else if (meta.inputType === "mmt_custom") {
+    container.innerHTML = `
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">
+        ※各関節および運動方向について、0〜5段階で徒手筋力を評価します。
+      </div>
+    `;
+
+    Object.keys(meta.subItems).forEach(key => {
+      const subItem = meta.subItems[key];
+      const itemEl = document.createElement("div");
+      itemEl.className = "stef-item-row";
+      itemEl.style.display = "flex";
+      itemEl.style.flexDirection = "column";
+      itemEl.style.marginBottom = "12px";
+      itemEl.style.borderBottom = "1px solid var(--border-color)";
+      itemEl.style.paddingBottom = "8px";
+
+      itemEl.innerHTML = `
+        <div style="font-weight:bold; font-size:13px; margin-bottom:4px;">${subItem.name}</div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label style="font-size:11px; color:var(--text-secondary);">左 MMT</label>
+            <select name="${evalId}_${key}_left" class="form-control" required>
+              <option value="">選択...</option>
+              ${meta.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:11px; color:var(--text-secondary);">右 MMT</label>
+            <select name="${evalId}_${key}_right" class="form-control" required>
+              <option value="">選択...</option>
+              ${meta.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+      `;
+      container.appendChild(itemEl);
+    });
+  }
   // 2. 関節可動域 (ROM) 特殊入力
   else if (meta.inputType === "rom") {
     Object.keys(meta.subItems).forEach(key => {
@@ -2609,6 +2914,44 @@ function handleAssessmentSubmit(e) {
           data.total = (data.gait || 0) + (data.stance || 0) + (data.sitting || 0) + (data.speech || 0) + chase_mean + nose_mean + rotation_mean + shin_mean;
         }
       } 
+      else if (meta.inputType === "basic_info_calc") {
+        const hVal = document.getElementById(`${evalId}_height`).value;
+        const wVal = document.getElementById(`${evalId}_weight`).value;
+        const bVal = document.getElementById(`${evalId}_bmi_hidden`).value;
+        data.height = hVal !== "" ? parseFloat(hVal) : null;
+        data.weight = wVal !== "" ? parseFloat(wVal) : null;
+        data.bmi = bVal !== "" ? parseFloat(bVal) : null;
+      }
+      else if (meta.inputType === "knee_wbi_calc") {
+        const lVal = document.getElementById(`${evalId}_left`).value;
+        const rVal = document.getElementById(`${evalId}_right`).value;
+        const wlVal = document.getElementById(`${evalId}_wbi_left_hidden`).value;
+        const wrVal = document.getElementById(`${evalId}_wbi_right_hidden`).value;
+        data.left = lVal !== "" ? parseFloat(lVal) : null;
+        data.right = rVal !== "" ? parseFloat(rVal) : null;
+        data.wbi_left = wlVal !== "" ? parseFloat(wlVal) : null;
+        data.wbi_right = wrVal !== "" ? parseFloat(wrVal) : null;
+      }
+      else if (meta.inputType === "mrc_custom") {
+        meta.items.forEach(item => {
+          const lVal = document.querySelector(`select[name="${evalId}_${item.id}_left"]`).value;
+          const rVal = document.querySelector(`select[name="${evalId}_${item.id}_right"]`).value;
+          data[item.id] = {
+            left: lVal !== "" ? parseInt(lVal) : null,
+            right: rVal !== "" ? parseInt(rVal) : null
+          };
+        });
+      }
+      else if (meta.inputType === "mmt_custom") {
+        Object.keys(meta.subItems).forEach(key => {
+          const lVal = document.querySelector(`select[name="${evalId}_${key}_left"]`).value;
+          const rVal = document.querySelector(`select[name="${evalId}_${key}_right"]`).value;
+          data[key] = {
+            left: lVal !== "" ? parseInt(lVal) : null,
+            right: rVal !== "" ? parseInt(rVal) : null
+          };
+        });
+      }
       else if (meta.inputType === "rom") {
         Object.keys(meta.subItems).forEach(key => {
           const lVal = document.querySelector(`input[name="${evalId}_${key}_left"]`).value;

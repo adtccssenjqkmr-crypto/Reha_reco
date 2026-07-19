@@ -2886,3 +2886,189 @@ PRESET_EVALUATIONS.tis = {
     }
   ]
 };
+
+// =============================================================
+// 【追加】一般ドメインへの「基本情報」カテゴリーの登録と、新規評価尺度の定義
+// =============================================================
+
+// 1. REHAB_DOMAINS の general ドメインの categories に basic_info を新設
+if (typeof REHAB_DOMAINS !== 'undefined' && REHAB_DOMAINS.general) {
+  REHAB_DOMAINS.general.categories = {
+    rom: "関節可動域 (ROM)",
+    basic_info: "基本情報", // 新設
+    balance: "基本動作・バランス",
+    gait: "歩行・移動",
+    strength: "筋力・その他の機能",
+    cognition: "ADL・認知機能",
+    frailty: "フレイル"
+  };
+}
+
+// 2. 基本情報（身長・体重・BMI）
+PRESET_EVALUATIONS.basic_info = {
+  id: "basic_info",
+  name: "基本情報（身長・体重・BMI）",
+  description: "対象者の身長、体重を記録し、BMIを自動計算します。",
+  inputType: "basic_info_calc",
+  domain: "general",
+  category: "basic_info",
+  subItems: {
+    height: { name: "身長", unit: "cm" },
+    weight: { name: "体重", unit: "kg" },
+    bmi: { name: "BMI", unit: "", computed: true }
+  }
+};
+
+// 3. FRT (Functional Reach Test)
+PRESET_EVALUATIONS.frt = {
+  id: "frt",
+  name: "FRT（Functional Reach Test）",
+  description: "バランス能力（前方リーチ距離）を測定し、転倒リスクを評価します。",
+  inputType: "numeric",
+  domain: "general",
+  category: "balance",
+  unit: "cm",
+  subItems: {
+    reach: { name: "前方リーチ距離", unit: "cm" }
+  },
+  guideline: "【カットオフ値の解釈】\n・15cm未満: 転倒リスクが極めて高い\n・15〜25cm: 転倒リスク中等度\n・25cm以上: 転倒リスクが低い（正常）"
+};
+
+// 4. miniBESTest
+PRESET_EVALUATIONS.minibest = {
+  id: "minibest",
+  name: "miniBESTest",
+  description: "動的バランス、反応的姿勢制御、感覚統合、動的歩行を多角的に評価します（14項目、28点満点）。",
+  inputType: "multi_scale",
+  domain: "general",
+  category: "balance",
+  subItems: {
+    total: { name: "miniBESTest 合計点", unit: "点", computed: true },
+    q1: { name: "1. 座位から立位", unit: "点" },
+    q2: { name: "2. つま先立ち", unit: "点" },
+    q3: { name: "3. 片足立ち", unit: "点" },
+    q4: { name: "4. 代償性ステップ - 前方", unit: "点" },
+    q5: { name: "5. 代償性ステップ - 後方", unit: "点" },
+    q6: { name: "6. 代償性ステップ - 側方", unit: "点" },
+    q7: { name: "7. 静止立位 (閉眼・硬い床)", unit: "点" },
+    q8: { name: "8. 静止立位 (閉眼・フォームパッド)", unit: "点" },
+    q9: { name: "9. 斜面台 - 閉眼", unit: "点" },
+    q10: { name: "10. 歩行速度の変化", unit: "点" },
+    q11: { name: "11. 頭部水平回旋歩行", unit: "点" },
+    q12: { name: "12. 歩行時ピボットターン", unit: "点" },
+    q13: { name: "13. 障害物またぎ", unit: "点" },
+    q14: { name: "14. TUG二重課題", unit: "点" }
+  },
+  items: [
+    { id: "q1", name: "1. 座位から立位 (立ち上がり動作)", criteria: { 2: "2点: 手を使わずに立てる、かつ安定", 1: "1点: 手を使って立てる、または複数回試みる", 0: "0点: 介助が必要、または立てない" } },
+    { id: "q2", name: "2. つま先立ち (踵を最大限挙上して3秒保持)", criteria: { 2: "2点: 最大限に踵を上げ、3秒間安定して保持できる", 1: "1点: 踵は上がるが3秒保持できない、または踵の高さが不十分", 0: "0点: 踵が上がらない、またはバランスを崩す" } },
+    { id: "q3", name: "3. 片足立ち (左右それぞれ測定し、低い方の点数を採用)", criteria: { 2: "2点: 20秒間安定して保持できる", 1: "1点: 20秒未満だが数秒以上保持できる、または体幹が著しく揺れる", 0: "0点: 支持足を床から離せない、または直ちに足がつく" } },
+    { id: "q4", name: "4. 代償性一歩踏み出し - 前方 (肩を他動的に押した後の立ち直り)", criteria: { 2: "2点: 迅速な1歩でバランスを自力回復できる", 1: "1点: バランス回復に複数歩要するが転倒しない", 0: "0点: 踏み出せない、または転倒・介助が必要" } },
+    { id: "q5", name: "5. 代償性一歩踏み出し - 後方 (背部を他動的に引いた後の立ち直り)", criteria: { 2: "2点: 迅速な1歩でバランスを自力回復できる", 1: "1点: 複数歩要するが自力で止まれる", 0: "0点: 踏み出せず後ろに倒れそうになる、または介助が必要" } },
+    { id: "q6", name: "6. 代償性一歩踏み出し - 側方 (腰部を側方に他動的に押した後の立ち直り。低い方を採用)", criteria: { 2: "2点: 側方への交差または側方ステップ1歩で自力回復", 1: "1点: 回復に複数歩要するが自立", 0: "0点: 側方に踏み出せずバランスを崩す、または介助が必要" } },
+    { id: "q7", name: "7. 静止立位 - 閉眼・硬い床 (30秒保持)", criteria: { 2: "2点: 閉眼で30秒間安全に立ち続けられる", 1: "1点: 30秒保持できるが著しく動揺する、または監視が必要", 0: "0点: 目を開けてしまう、または倒れそうになって介助を要する" } },
+    { id: "q8", name: "8. 静止立位 - 閉眼・クッション/フォームパッド (30秒保持)", criteria: { 2: "2点: パッド上で閉眼で30秒間安全に立ち続けられる", 1: "1点: 30秒保持できるが著しく動揺する", 0: "0点: 保持できない、または介助が必要" } },
+    { id: "q9", name: "9. 斜面台 - 閉眼 (つま先上がりの斜面で閉眼30秒保持)", criteria: { 2: "2点: 斜面上で閉眼で30秒間安定して立てる", 1: "1点: 30秒保持できるが動揺が大きい、または位置調整が必要", 0: "0点: 斜面上で立てない、または開眼してしまう" } },
+    { id: "q10", name: "10. 歩行速度の変化 (通常の歩行から合図で速歩、遅歩へ切り替え)", criteria: { 2: "2点: 歩行速度の変更が滑らかで、バランスも安定している", 1: "1点: 速度変更はできるが歩容が著しく乱れる、または切り替えが遅い", 0: "0点: 速度を変更できない、またはバランスを崩す" } },
+    { id: "q11", name: "11. 頭部水平回旋歩行 (歩行中に頭部を交互に左右に向ける)", criteria: { 2: "2点: 直線を維持したまま、頭部回旋歩行がスムーズに行える", 1: "1点: 頭を回すと歩行方向が逸れる、または歩行速度が低下する", 0: "0点: 頭を回そうとすると立ち止まる、またはバランスを崩す" } },
+    { id: "q12", name: "12. 歩行時ピボットターン (歩行中に合図で180度反転して立ち止まる)", criteria: { 2: "2点: 迅速かつ安定して反転し、直ちに静止できる (4秒以内)", 1: "1点: 反転後に足踏みをしてバランスを取る必要がある", 0: "0点: 反転時に転倒しそうになる、または介助が必要" } },
+    { id: "q13", name: "13. 障害物またぎ越し (靴箱などの障害物をまたいで歩く)", criteria: { 2: "2点: 障害物を接触せずにスムーズにまたぎ越せる", 1: "1点: またぎ越しはできるが動作が慎重すぎる、または足が障害物に触れる", 0: "0点: 障害物を避けて歩く、またはまたごうとしてバランスを崩す" } },
+    { id: "q14", name: "14. TUG二重課題 (計算をしながら歩いて戻る)", criteria: { 2: "2点: 通常のTUGと比較して、計算中も歩行速度や計算内容に変化がない", 1: "1点: 計算中に歩行速度が10%以上遅くなる、または計算に軽微な遅れがある", 0: "0点: 計算を始めると立ち止まる、または計算が完全に止まってしまう" } }
+  ]
+};
+
+// 5. MRCスコア
+PRESET_EVALUATIONS.mrc = {
+  id: "mrc",
+  name: "MRC 徒手筋力スコア",
+  description: "主要な関節運動における筋力低下・麻痺の程度を0〜5の6段階で左右別に記録します。",
+  inputType: "mrc_custom",
+  domain: "general",
+  category: "strength",
+  subItems: {
+    shoulder_abd: { name: "肩外転", unit: "点" },
+    elbow_flex: { name: "肘屈曲", unit: "点" },
+    wrist_ext: { name: "手背屈", unit: "点" },
+    hip_flex: { name: "股屈曲", unit: "点" },
+    knee_ext: { name: "膝伸展", unit: "点" },
+    ankle_flex: { name: "足背屈", unit: "点" }
+  },
+  items: [
+    { id: "shoulder_abd", name: "1. 肩外転 (Deltoid)" },
+    { id: "elbow_flex", name: "2. 肘屈曲 (Biceps)" },
+    { id: "wrist_ext", name: "3. 手関節背屈 (Wrist Extensors)" },
+    { id: "hip_flex", name: "4. 股関節屈曲 (Iliopsoas)" },
+    { id: "knee_ext", name: "5. 膝関節伸展 (Quadriceps)" },
+    { id: "ankle_flex", name: "6. 足関節背屈 (Tibialis Anterior)" }
+  ],
+  options: [
+    { value: 5, label: "5: 正常な筋力（強い抵抗に抗して全可動域動かせる）" },
+    { value: 4, label: "4: 中等度の抵抗に抗して全可動域動かせる（やや弱い）" },
+    { value: 3, label: "3: 重力に抗してのみ全可動域動かせる" },
+    { value: 2, label: "2: 重力を除けば全可動域動かせる" },
+    { value: 1, label: "1: 筋肉のわずかな収縮やピクつきが認められるが、関節運動はない" },
+    { value: 0, label: "0: 収縮が全く認められない（完全麻痺）" }
+  ]
+};
+
+// 6. MMT (ROMの全運動方向と完全に一致した徒手筋力テスト)
+PRESET_EVALUATIONS.mmt = {
+  id: "mmt",
+  name: "MMT（徒手筋力テスト）",
+  description: "主要筋群の徒手筋力を0〜5の6段階で左右別に測定します。評価部位はROM項目に準拠します。",
+  inputType: "mmt_custom",
+  domain: "general",
+  category: "strength",
+  subItems: {
+    shoulder_flex: { name: "肩関節 屈曲", unit: "" },
+    shoulder_ext: { name: "肩関節 伸展", unit: "" },
+    shoulder_abd: { name: "肩関節 外転", unit: "" },
+    elbow_flex: { name: "肘関節 屈曲", unit: "" },
+    elbow_ext: { name: "肘関節 伸展", unit: "" },
+    wrist_flex: { name: "手関節 掌屈", unit: "" },
+    wrist_ext: { name: "手関節 背屈", unit: "" },
+    hip_flex: { name: "股関節 屈曲", unit: "" },
+    hip_ext: { name: "股関節 伸展", unit: "" },
+    knee_flex: { name: "膝関節 屈曲", unit: "" },
+    knee_ext: { name: "膝関節 伸展", unit: "" },
+    ankle_flex: { name: "足関節 背屈", unit: "" },
+    ankle_ext: { name: "足関節 底屈", unit: "" }
+  },
+  options: [
+    { value: 5, label: "5: 正常筋力" },
+    { value: 4, label: "4: 良好（やや抵抗に弱い）" },
+    { value: 3, label: "3: 公正（重力にのみ抗して動かせる）" },
+    { value: 2, label: "2: 不可（重力を除けば動かせる）" },
+    { value: 1, label: "1: 痕跡（収縮のみ、関節運動なし）" },
+    { value: 0, label: "0: ゼロ（完全麻痺）" }
+  ]
+};
+
+// 7. SS-5
+PRESET_EVALUATIONS.ss5 = {
+  id: "ss5",
+  name: "SS-5（5回立ち上がりテスト）",
+  description: "椅子からの5回立ち上がりに要する時間（秒）を測定し、下肢筋力を評価します。",
+  inputType: "timer_numeric",
+  domain: "general",
+  category: "strength",
+  subItems: {
+    time: { name: "起立時間", unit: "秒" }
+  },
+  guideline: "【評価結果の解釈】\n・12秒以上: 高齢者における転倒リスクが上昇\n・15秒以上: 基本的ADL制限および運動器不安定症のリスクが高まります。"
+};
+
+// 8. CS-30
+PRESET_EVALUATIONS.cs30 = {
+  id: "cs30",
+  name: "CS-30（30秒椅子立ち上がりテスト）",
+  description: "30秒間に安全に行えた立ち上がり回数を測定し、下肢筋持久力を評価します。",
+  inputType: "numeric",
+  domain: "general",
+  category: "strength",
+  unit: "回",
+  subItems: {
+    count: { name: "起立回数", unit: "回" }
+  },
+  guideline: "【評価結果の解釈】\n・年齢・性別別の基準値低下の目安（70〜74歳）：\n　男性：14回未満で身体機能低下が疑われる\n　女性：12回未満で身体機能低下が疑われる"
+};
