@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.rehareco.myapp",
       "sha256_cert_fingerprints": [
-        "0F:F0:9A:8D:AA:53:49:59:45:9C:B9:FF:ED:DC:3E:30:F5:89:01:35:D8:79:39:51:74:07:04:65:C8:DA:CD:12"
+        "0F:F0:9A:8D:AA:53:49:59:45:9C:B9:FF:ED:DC:3E:30:F5:89:01:35:D8:79:39:51:74:07:04:65:C8:DA:CD:12",
+        "9D:1C:65:FD:64:19:54:FC:A2:49:6F:16:08:FC:2B:C3:26:7B:24:BD:E2:6A:66:B7:7A:64:94:DB:A3:22:40:A8"
       ]
     }
   }
