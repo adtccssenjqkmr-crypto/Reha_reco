@@ -49,7 +49,9 @@ function loadData() {
       const hasSampleA = state.patients.some(p => p.id === "サンプルA");
       const sampleB = state.patients.find(p => p.id === "サンプルB");
       const hasOldDiagB = sampleB && sampleB.diagnosis && sampleB.diagnosis.includes("腰痛症");
-      if (hasOldDemo || !hasSampleA || hasOldDiagB) {
+      // WBI比率化に伴い強制マイグレーションを走らせるため、hasSampleB もチェック条件に含めるか、もしくは無条件に新仕様に置き換える
+      const hasWbiPct = state.patients.some(p => p.records && p.records.some(r => r.evaluations && r.evaluations.knee_extension && r.evaluations.knee_extension.wbi_left > 1.0));
+      if (hasOldDemo || !hasSampleA || hasOldDiagB || hasWbiPct) {
         state.patients = getDemoData();
         savePatients();
       }
@@ -911,7 +913,13 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
         const valSpan = document.createElement("span");
         valSpan.className = "eval-detail-item-val";
         valSpan.style.fontWeight = "700";
-        valSpan.textContent = val !== undefined ? `${val} 点` : "--";
+        let displayUnit = "点";
+        if (subItemConfig && subItemConfig.unit !== undefined) {
+          displayUnit = subItemConfig.unit;
+        } else if (meta && meta.unit !== undefined) {
+          displayUnit = meta.unit;
+        }
+        valSpan.textContent = val !== undefined ? `${val}${displayUnit ? " " + displayUnit : ""}` : "--";
 
         itemHeader.appendChild(nameSpan);
         itemHeader.appendChild(valSpan);
@@ -970,7 +978,11 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
             const childValue = document.createElement("span");
             childValue.className = "eval-detail-item-val";
             childValue.style.fontSize = "12px";
-            childValue.textContent = `${childVal} 点`;
+            let childUnit = "点";
+            if (childConfig && childConfig.unit !== undefined) {
+              childUnit = childConfig.unit;
+            }
+            childValue.textContent = `${childVal}${childUnit ? " " + childUnit : ""}`;
 
             childHeader.appendChild(childName);
             childHeader.appendChild(childValue);
@@ -2152,8 +2164,8 @@ function buildInputFormUI(section, evalId, meta) {
         <input type="hidden" name="${evalId}_wbi_left" id="${evalId}_wbi_left_hidden">
         <input type="hidden" name="${evalId}_wbi_right" id="${evalId}_wbi_right_hidden">
         <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 5px;">${weightStatusText}</div>
-        <div>左 WBI: <span class="computed-val" id="${evalId}_wbi_left_val">--</span> %</div>
-        <div>右 WBI: <span class="computed-val" id="${evalId}_wbi_right_val">--</span> %</div>
+        <div>左 WBI: <span class="computed-val" id="${evalId}_wbi_left_val">--</span></div>
+        <div>右 WBI: <span class="computed-val" id="${evalId}_wbi_right_val">--</span></div>
         <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;" id="${evalId}_wbi_interpretation"></div>
       </div>
     `;
@@ -2177,7 +2189,7 @@ function buildInputFormUI(section, evalId, meta) {
           let rWbi = null;
 
           if (lVal > 0) {
-            lWbi = ((lVal / currentWeight) * 100).toFixed(1);
+            lWbi = (lVal / currentWeight).toFixed(2);
             wbiLeftVal.textContent = lWbi;
             wbiLeftHidden.value = lWbi;
           } else {
@@ -2186,7 +2198,7 @@ function buildInputFormUI(section, evalId, meta) {
           }
 
           if (rVal > 0) {
-            rWbi = ((rVal / currentWeight) * 100).toFixed(1);
+            rWbi = (rVal / currentWeight).toFixed(2);
             wbiRightVal.textContent = rWbi;
             wbiRightHidden.value = rWbi;
           } else {
@@ -2197,14 +2209,14 @@ function buildInputFormUI(section, evalId, meta) {
           if (lWbi || rWbi) {
             const maxWbi = Math.max(parseFloat(lWbi || 0), parseFloat(rWbi || 0));
             let interpretationText = "【WBIの目安】<br>";
-            if (maxWbi >= 80) {
-              interpretationText += "・80%以上：安定した走行・跳躍が可能レベル";
-            } else if (maxWbi >= 60) {
-              interpretationText += "・60%以上：実用的な独歩が可能レベル";
-            } else if (maxWbi >= 40) {
-              interpretationText += "・40%〜60%：杖歩行または見守り歩行レベル";
+            if (maxWbi >= 0.8) {
+              interpretationText += "・0.8以上：安定した走行・跳躍が可能レベル";
+            } else if (maxWbi >= 0.6) {
+              interpretationText += "・0.6以上：実用的な独歩が可能レベル";
+            } else if (maxWbi >= 0.4) {
+              interpretationText += "・0.4〜0.6：杖歩行または見守り歩行レベル";
             } else {
-              interpretationText += "・40%未満：歩行困難（車椅子レベル）のリスクが高いです。";
+              interpretationText += "・0.4未満：歩行困難（車椅子レベル）のリスクが高いです。";
             }
             interpretation.innerHTML = interpretationText;
           } else {
@@ -3094,7 +3106,7 @@ function handleAssessmentSubmit(e) {
         data.time = sec;
         data.steps = steps;
         // 速度と歩幅を再計算
-        data.speed = sec > 0 ? parseFloat((600 / sec).toFixed(1)) : 0;
+        data.speed = sec > 0 ? parseFloat((10 / sec).toFixed(2)) : 0;
         data.stride = steps > 0 ? parseFloat((1000 / steps).toFixed(1)) : 0;
       }
       else if (meta.inputType === "timer_numeric") {
@@ -3526,7 +3538,7 @@ function getDemoData() {
             walk_10m: {
               time: 15.2,
               steps: 26,
-              speed: 39.5,
+              speed: 0.66,
               stride: 38.5
             },
             tug: {
@@ -3681,7 +3693,7 @@ function getDemoData() {
             walk_10m: {
               time: 12.0,
               steps: 22,
-              speed: 50.0,
+              speed: 0.83,
               stride: 45.5
             },
             tug: {
@@ -3836,7 +3848,7 @@ function getDemoData() {
             walk_10m: {
               time: 9.5,
               steps: 18,
-              speed: 63.2,
+              speed: 1.05,
               stride: 55.6
             },
             tug: {
@@ -3972,7 +3984,7 @@ function getDemoData() {
           evaluator: "C.D",
           evaluations: {
             basic_info: { height: 160.0, weight: 55.0, bmi: 21.5 },
-            knee_extension: { left: 25.0, right: 12.0, wbi_left: 45.5, wbi_right: 21.8 },
+            knee_extension: { left: 25.0, right: 12.0, wbi_left: 0.46, wbi_right: 0.22 },
             grip_strength: { left: 20.0, right: 18.0 },
             rom: {
               hip_flex: { left: 100, right: 85 },
@@ -3982,7 +3994,7 @@ function getDemoData() {
               ankle_flex: { left: 15, right: 10 },
               ankle_ext: { left: 35, right: 30 }
             },
-            walk_10m: { time: 16.5, steps: 28, speed: 36.4, stride: 35.7 },
+            walk_10m: { time: 16.5, steps: 28, speed: 0.61, stride: 35.7 },
             walk_6min: { distance: 180, borg_before: 9, borg_after: 15 },
             tug: { time: 22.4 },
             frt: { reach: 14 },
@@ -4030,7 +4042,7 @@ function getDemoData() {
           evaluator: "C.D",
           evaluations: {
             basic_info: { height: 160.0, weight: 54.2, bmi: 21.2 },
-            knee_extension: { left: 26.5, right: 19.0, wbi_left: 48.9, wbi_right: 35.1 },
+            knee_extension: { left: 26.5, right: 19.0, wbi_left: 0.49, wbi_right: 0.35 },
             grip_strength: { left: 21.0, right: 19.5 },
             rom: {
               hip_flex: { left: 115, right: 105 },
@@ -4040,7 +4052,7 @@ function getDemoData() {
               ankle_flex: { left: 18, right: 15 },
               ankle_ext: { left: 40, right: 35 }
             },
-            walk_10m: { time: 11.2, steps: 21, speed: 53.5, stride: 47.6 },
+            walk_10m: { time: 11.2, steps: 21, speed: 0.89, stride: 47.6 },
             walk_6min: { distance: 265, borg_before: 8, borg_after: 12 },
             tug: { time: 14.8 },
             frt: { reach: 22 },

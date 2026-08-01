@@ -2995,7 +2995,7 @@ PRESET_EVALUATIONS.mrc = {
     elbow_flex: { name: "肘屈曲", unit: "点" },
     wrist_ext: { name: "手背屈", unit: "点" },
     hip_flex: { name: "股屈曲", unit: "点" },
-    knee_ext: { name: "膝伸展", unit: "点" },
+    knee_ext: { name: "膝伸展", unit: "kgf" },
     ankle_flex: { name: "足背屈", unit: "点" }
   },
   items: [
@@ -3024,6 +3024,7 @@ PRESET_EVALUATIONS.mmt = {
   inputType: "mmt_custom",
   domain: "general",
   category: "strength",
+  unit: "",
   subItems: {
     shoulder_flex: { name: "肩関節 屈曲", unit: "" },
     shoulder_ext: { name: "肩関節 伸展", unit: "" },
@@ -3035,7 +3036,7 @@ PRESET_EVALUATIONS.mmt = {
     hip_flex: { name: "股関節 屈曲", unit: "" },
     hip_ext: { name: "股関節 伸展", unit: "" },
     knee_flex: { name: "膝関節 屈曲", unit: "" },
-    knee_ext: { name: "膝関節 伸展", unit: "" },
+    knee_ext: { name: "膝関節 伸展", unit: "kgf" },
     ankle_flex: { name: "足関節 背屈", unit: "" },
     ankle_ext: { name: "足関節 底屈", unit: "" }
   },
@@ -3057,6 +3058,7 @@ PRESET_EVALUATIONS.ss5 = {
   inputType: "timer_numeric",
   domain: "general",
   category: "strength",
+  unit: "秒",
   subItems: {
     time: { name: "起立時間", unit: "秒" }
   },

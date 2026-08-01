@@ -79,7 +79,7 @@ const PRESET_EVALUATIONS = {
     subItems: {
       time: { name: "時間", unit: "秒" },
       steps: { name: "歩数", unit: "歩" },
-      speed: { name: "歩行速度", unit: "m/min", computed: true },
+      speed: { name: "歩行速度", unit: "m/秒", computed: true },
       stride: { name: "平均歩幅", unit: "cm", computed: true }
     }
   },

@@ -93,7 +93,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
 
     if (subItemKey !== "left" && subItemKey !== "right") {
       datasets.push({
-        label: `左 - ${itemLabel}`,
+        label: `左 - ${itemLabel} ${unit ? "(" + unit + ")" : ""}`,
         data: leftData,
         borderColor: "#0ea5e9", // アプリテーマ青
         backgroundColor: "rgba(14, 165, 233, 0.1)",
@@ -104,7 +104,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
         pointRadius: 5
       });
       datasets.push({
-        label: `右 - ${itemLabel}`,
+        label: `右 - ${itemLabel} ${unit ? "(" + unit + ")" : ""}`,
         data: rightData,
         borderColor: "#a855f7", // パープル
         backgroundColor: "rgba(168, 85, 247, 0.1)",
@@ -118,7 +118,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
       // 片側のみ選択された場合
       const isLeft = subItemKey === "left";
       datasets.push({
-        label: isLeft ? `左 - ${evalName}` : `右 - ${evalName}`,
+        label: isLeft ? `左 - ${evalName} ${unit ? "(" + unit + ")" : ""}` : `右 - ${evalName} ${unit ? "(" + unit + ")" : ""}`,
         data: isLeft ? leftData : rightData,
         borderColor: isLeft ? "#0ea5e9" : "#a855f7",
         backgroundColor: isLeft ? "rgba(14, 165, 233, 0.1)" : "rgba(168, 85, 247, 0.1)",
@@ -325,10 +325,22 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
     });
 
     const itemLabel = isTotal ? "合計点" : (evalMeta.subItems[activeSubItemId] ? evalMeta.subItems[activeSubItemId].name : activeSubItemId);
-    const unit = isTotal ? "点" : "点";
+    let unit = "点";
+    if (isTotal) {
+      if (evalMeta.unit !== undefined) {
+        unit = evalMeta.unit;
+      }
+    } else {
+      const subItem = evalMeta.subItems[activeSubItemId];
+      if (subItem && subItem.unit !== undefined) {
+        unit = subItem.unit;
+      } else if (evalMeta.unit !== undefined) {
+        unit = evalMeta.unit;
+      }
+    }
 
     datasets.push({
-      label: `${evalName} (${itemLabel})`,
+      label: `${evalName} - ${itemLabel}${unit ? " (" + unit + ")" : ""}`,
       data: dataVals,
       borderColor: isTotal ? "#0ea5e9" : "#10b981",
       backgroundColor: isTotal ? "rgba(14, 165, 233, 0.1)" : "rgba(16, 185, 129, 0.1)",
@@ -450,7 +462,7 @@ function formatDateString(dateStr) {
  * 補助関数: 指定した下位項目が定義に含まれるかチェック
  */
 function subItemsExist(evalMeta, activeSubItemId) {
-  return evalMeta && evalMeta.subItems && evalMeta.subItems[subItemId] !== undefined;
+  return evalMeta && evalMeta.subItems && evalMeta.subItems[activeSubItemId] !== undefined;
 }
 
 /**
