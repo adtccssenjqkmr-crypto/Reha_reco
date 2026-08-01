@@ -3202,31 +3202,35 @@ function handleAssessmentSubmit(e) {
     }
   });
 
-  // レコードの登録
-  const record = {
-    date,
-    evaluator,
-    evaluations
-  };
-
-  // 編集モードか新規登録モードかで保存処理を分岐
+  // 編集モードか新規登録モードかで保存対象のレコードインデックスを特定
+  let targetRecordIndex = -1;
   if (state.editingRecordIndex >= 0) {
-    // 既存レコードの上書き更新
-    state.patients[pIndex].records[state.editingRecordIndex] = record;
+    targetRecordIndex = state.editingRecordIndex;
     state.editingRecordIndex = -1; // 編集モード解除
-    alert("測定記録を修正・更新しました。");
   } else {
-    // 新規登録：同じ日付の重複チェック
-    const existingRecordIndex = state.patients[pIndex].records.findIndex(r => r.date === date);
-    if (existingRecordIndex >= 0) {
-      if (confirm(`${date} の測定記録はすでに存在します。上書きしますか？`)) {
-        state.patients[pIndex].records[existingRecordIndex] = record;
-      } else {
-        return; // キャンセル
-      }
-    } else {
-      state.patients[pIndex].records.push(record);
-    }
+    // 新規登録：同じ日付の既存レコードがあるかチェック
+    targetRecordIndex = state.patients[pIndex].records.findIndex(r => r.date === date);
+  }
+
+  if (targetRecordIndex >= 0) {
+    // 既存レコードが存在する場合は、評価項目をインテリジェントにマージ（部分上書き）する
+    const targetRecord = state.patients[pIndex].records[targetRecordIndex];
+    targetRecord.date = date; // 日付を最新入力値に更新
+    targetRecord.evaluator = evaluator;
+    targetRecord.evaluations = {
+      ...targetRecord.evaluations,
+      ...evaluations
+    };
+    alert("同日の測定記録に追加・更新しました。");
+  } else {
+    // 完全新規登録：新しいレコードを作成して追加
+    const record = {
+      date,
+      evaluator,
+      evaluations
+    };
+    state.patients[pIndex].records.push(record);
+    alert("測定記録を登録しました。");
   }
 
   savePatients();
