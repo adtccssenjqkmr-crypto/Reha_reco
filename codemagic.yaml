@@ -8,8 +8,8 @@ workflows:
     triggering:
       events:
         - push
-      branches:
-        - main
+      branch_patterns:
+        - pattern: main
     environment:
       ios_signing:
         distribution_type: app_store
