@@ -1,0 +1,39 @@
+workflows:
+  ios-release:
+    name: iOS Release Build
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic
+    triggering:
+      events:
+        - push
+      branches:
+        - main
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rehareco.myapp
+      vars:
+        XCODE_WORKSPACE: "ios/リハレコ.xcworkspace"
+        XCODE_SCHEME: "App"
+    scripts:
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
+      - name: Build iOS App and Archive
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --configuration Release
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
