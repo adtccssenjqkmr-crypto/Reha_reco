@@ -16,12 +16,15 @@ workflows:
         bundle_identifier: com.rehareco.myapp
       vars:
         XCODE_WORKSPACE: "ios/リハレコ.xcworkspace"
-        XCODE_SCHEME: "App"
+        XCODE_SCHEME: "リハレコ"
     scripts:
       - name: Install CocoaPods
         script: |
           cd ios
           pod install
+      - name: Patch Development Team ID in Xcode project
+        script: |
+          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = 769Y9JYC3N;/g' ios/リハレコ.xcodeproj/project.pbxproj
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
