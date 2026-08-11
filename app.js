@@ -160,17 +160,20 @@ function saveCustomEvaluations() {
 // 入力中の未保存データがあるかチェックする
 function hasUnsavedChanges(viewId) {
   if (viewId === "view-assessment") {
-    // 数値入力ステップが表示されているか
+    // 1. 評価項目選択ステップでのチェック状況を監視
+    const checkedEvals = document.querySelectorAll("#assessment-eval-list input[type='checkbox']:checked");
+    if (checkedEvals.length > 0) {
+      return true;
+    }
+    // 2. 数値入力ステップでの入力状況を監視
     const formStep = document.getElementById("assessment-step-form");
     if (formStep && formStep.style.display !== "none") {
-      // 数値入力欄、セレクトボックス、テキストエリアの値が入っているかチェック
       const inputs = formStep.querySelectorAll("input[type='number'], select, textarea");
       for (let input of inputs) {
         if (input.value !== "" && input.id !== "assessment-date" && input.id !== "assessment-evaluator") {
           return true;
         }
       }
-      // ラジオボタンやチェックボックスの選択状況
       const checkedInputs = formStep.querySelectorAll("input[type='radio']:checked, input[type='checkbox']:checked");
       if (checkedInputs.length > 0) {
         return true;
