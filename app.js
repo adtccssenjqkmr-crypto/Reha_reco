@@ -24,15 +24,58 @@ let timerElapsed = 0;
 
 // アプリ初期化時の処理
 document.addEventListener("DOMContentLoaded", () => {
+  // ブラウザの履歴の初期状態を設定（物理戻るボタン対策）
+  if (history.state === null) {
+    history.replaceState({ viewId: "view-patients" }, "", "#view-patients");
+  }
+  
+  // 物理戻るボタン（ブラウザの「戻る」履歴）の検知・制御
+  window.addEventListener("popstate", (event) => {
+    const targetViewId = event.state && event.state.viewId;
+    
+    // 入力中のデータがある場合の確認
+    if (state.currentView === "view-assessment" || state.currentView === "view-patient-form") {
+      if (hasUnsavedChanges(state.currentView)) {
+        const confirmLeave = confirm("入力中のデータがあります。移動するとデータが消去されますが、よろしいですか？");
+        if (!confirmLeave) {
+          // 履歴を現在の画面に戻すために、再び現在の状態を pushState して戻る操作をキャンセルする
+          history.pushState({ viewId: state.currentView }, "", "#" + state.currentView);
+          
+          // ボトムナビゲーションのアクティブクラスも維持する
+          const navItems = document.querySelectorAll(".nav-item");
+          navItems.forEach(item => {
+            if (item.getAttribute("data-view") === state.currentView) {
+              item.classList.add("active");
+            } else {
+              item.classList.remove("active");
+            }
+          });
+          return;
+        }
+      }
+    }
+
+    if (targetViewId) {
+      // 履歴経由での画面切り替え（pushToStackはfalse）
+      switchView(targetViewId, false);
+      // 手動履歴スタックの同期
+      if (state.historyStack.length > 0) {
+        state.historyStack.pop();
+      }
+    } else {
+      // 初期画面へ戻す
+      switchView("view-patients", false);
+    }
+  });
+
   loadData();
   initPremiumStatus(); // プレミアム課金＆広告状態のチェック
   setupEventListeners();
   renderPatientsList();
   renderCustomEvaluationsList();
   
-  // デフォルトビューを設定
-  
-  switchView("view-patients");
+  // デフォルトビューを設定（最初のpushStateを防ぐためpushToStackはfalse）
+  switchView("view-patients", false);
 });
 
 // ローカルストレージからデータをロード
@@ -114,8 +157,58 @@ function saveCustomEvaluations() {
   localStorage.setItem("rehareco_custom_evaluations", JSON.stringify(state.customEvaluations));
 }
 
+// 入力中の未保存データがあるかチェックする
+function hasUnsavedChanges(viewId) {
+  if (viewId === "view-assessment") {
+    // 数値入力ステップが表示されているか
+    const formStep = document.getElementById("assessment-step-form");
+    if (formStep && formStep.style.display !== "none") {
+      // 数値入力欄、セレクトボックス、テキストエリアの値が入っているかチェック
+      const inputs = formStep.querySelectorAll("input[type='number'], select, textarea");
+      for (let input of inputs) {
+        if (input.value !== "" && input.id !== "assessment-date" && input.id !== "assessment-evaluator") {
+          return true;
+        }
+      }
+      // ラジオボタンやチェックボックスの選択状況
+      const checkedInputs = formStep.querySelectorAll("input[type='radio']:checked, input[type='checkbox']:checked");
+      if (checkedInputs.length > 0) {
+        return true;
+      }
+    }
+  }
+  if (viewId === "view-patient-form") {
+    const inputs = document.querySelectorAll("#patient-form input[type='text'], #patient-form input[type='number']");
+    for (let input of inputs) {
+      if (input.value !== "" && input.id !== "patient-index") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // 画面切り替えルーター
 function switchView(viewId, pushToStack = true) {
+  // 未保存データの確認
+  if (state.currentView === "view-assessment" || state.currentView === "view-patient-form") {
+    if (hasUnsavedChanges(state.currentView) && state.currentView !== viewId) {
+      const confirmLeave = confirm("入力中のデータがあります。移動するとデータが消去されますが、よろしいですか？");
+      if (!confirmLeave) {
+        // ナビゲーションバーのアクティブ表示を現在の画面に戻す
+        const navItems = document.querySelectorAll(".nav-item");
+        navItems.forEach(item => {
+          if (item.getAttribute("data-view") === state.currentView) {
+            item.classList.add("active");
+          } else {
+            item.classList.remove("active");
+          }
+        });
+        return; // 遷移をキャンセル
+      }
+    }
+  }
+
   const views = document.querySelectorAll(".app-view");
   views.forEach(v => v.classList.remove("active"));
   
@@ -147,6 +240,8 @@ function switchView(viewId, pushToStack = true) {
 
   if (pushToStack && state.currentView !== viewId) {
     state.historyStack.push(state.currentView);
+    // ブラウザの履歴（History API）にも追加して物理戻るボタンと連動させる
+    history.pushState({ viewId: viewId }, "", "#" + viewId);
   }
   state.currentView = viewId;
 
@@ -157,8 +252,8 @@ function switchView(viewId, pushToStack = true) {
 // 前の画面に戻る
 function goBack() {
   if (state.historyStack.length > 0) {
-    const prevView = state.historyStack.pop();
-    switchView(prevView, false);
+    // ブラウザの履歴を1つ戻す（popstate イベントが発火して安全に前のビューに戻ります）
+    history.back();
   } else {
     switchView("view-patients", false);
   }
