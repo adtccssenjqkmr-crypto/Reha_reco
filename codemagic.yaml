@@ -22,6 +22,7 @@ workflows:
         script: |
           cd android
           chmod +x gradlew
+          export JAVA_HOME=$(/usr/libexec/java_home -v 21)
           ./gradlew bundleRelease
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
