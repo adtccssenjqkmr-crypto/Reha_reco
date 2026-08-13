@@ -3,6 +3,9 @@ workflows:
     name: Android Release Build
     max_build_duration: 60
     instance_type: mac_mini_m2
+    environment:
+      vars:
+        JAVA_VERSION: "21"
     triggering:
       events:
         - push
