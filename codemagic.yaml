@@ -22,7 +22,7 @@ workflows:
           cd android
           chmod +x gradlew
           export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-          cp ../signing.keystore signing.keystore
+          cp ../signing.keystore app/signing.keystore
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file="signing.keystore" \
             -Pandroid.injected.signing.store.password="GSqYFW8RNgPT" \
