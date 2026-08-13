@@ -24,7 +24,7 @@ workflows:
           export JAVA_HOME=$(/usr/libexec/java_home -v 21)
           cp ../signing.keystore app/signing.keystore
           ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file="signing.keystore" \
+            -Pandroid.injected.signing.store.file="$(pwd)/app/signing.keystore" \
             -Pandroid.injected.signing.store.password="GSqYFW8RNgPT" \
             -Pandroid.injected.signing.key.alias="my-key-alias" \
             -Pandroid.injected.signing.key.password="GSqYFW8RNgPT"
