@@ -21,7 +21,12 @@ workflows:
         script: |
           cd android
           chmod +x gradlew
-          ./gradlew bundleRelease
+          export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file="../signing.keystore" \
+            -Pandroid.injected.signing.store.password="GSqYFW8RNgPT" \
+            -Pandroid.injected.signing.key.alias="my-key-alias" \
+            -Pandroid.injected.signing.key.password="GSqYFW8RNgPT"
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
 
