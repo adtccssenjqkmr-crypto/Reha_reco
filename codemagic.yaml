@@ -15,16 +15,22 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.rehareco.myapp
       vars:
-        XCODE_WORKSPACE: "ios/リハレコ.xcworkspace"
-        XCODE_SCHEME: "リハレコ"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
     scripts:
-      - name: Install CocoaPods
+      - name: Install npm dependencies
         script: |
-          cd ios
-          pod install
+          npm install
+      - name: Sync Web Assets to iOS Project
+        script: |
+          npx cap sync ios
       - name: Patch Development Team ID in Xcode project
         script: |
-          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = 769Y9JYC3N;/g' ios/リハレコ.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = 769Y9JYC3N;/g' ios/App/App.xcodeproj/project.pbxproj
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
