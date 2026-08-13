@@ -4,8 +4,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
-      vars:
-        JAVA_VERSION: "21"
+      java: 21
     triggering:
       events:
         - push
@@ -22,7 +21,6 @@ workflows:
         script: |
           cd android
           chmod +x gradlew
-          export JAVA_HOME=$(/usr/libexec/java_home -v 21)
           ./gradlew bundleRelease
     artifacts:
       - android/app/build/outputs/bundle/release/*.aab
