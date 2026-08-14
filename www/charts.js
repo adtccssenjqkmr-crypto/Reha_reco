@@ -386,7 +386,8 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
                 if (context.parsed.y === 1.5) label += "1+";
                 else label += context.parsed.y;
               } else {
-                label += context.parsed.y;
+                const val = context.parsed.y;
+                label += (typeof val === "number") ? Number(val.toFixed(1)) : val;
                 // 単位を追加
                 const unit = getUnitForEvaluation(evalId, activeSubItemId);
                 if (unit) label += ` ${unit}`;
@@ -417,7 +418,7 @@ function updateChart(canvasId, records, evalId, subItemId = "total") {
               if (value === 1.5) return "1+";
               return value;
             }
-            return value;
+             return (typeof value === "number") ? Number(value.toFixed(1)) : value;
           }
         }
       }

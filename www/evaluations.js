@@ -756,23 +756,9 @@ const PRESET_EVALUATIONS = {
     inputType: "multi_scale",
     subItems: {
       total: { name: "TIS 合計点", unit: "点", computed: true },
-      s_1: { name: "静的1. 開始肢位保持 (10秒)", unit: "点" },
-      s_2: { name: "静的2. 非麻痺側下肢の交差保持 (10秒)", unit: "点" },
-      s_3: { name: "静的3. 非麻痺側下肢を交差する動作", unit: "点" },
-      d_1: { name: "動的1. 麻痺側への側方傾斜 (肘接地)", unit: "点" },
-      d_2: { name: "動的2. 麻痺側傾斜時の短縮/伸張", unit: "点" },
-      d_3: { name: "動的3. 麻痺側傾斜時の代償動作なし", unit: "点" },
-      d_4: { name: "動的4. 非麻痺側への側方傾斜 (肘接地)", unit: "点" },
-      d_5: { name: "動的5. 非麻痺側傾斜時の短縮/伸張", unit: "点" },
-      d_6: { name: "動的6. 非麻痺側傾斜時の代償動作なし", unit: "点" },
-      d_7: { name: "動的7. 麻痺側骨盤の挙上", unit: "点" },
-      d_8: { name: "動的8. 麻痺側骨盤挙上時の代償動作なし", unit: "点" },
-      d_9: { name: "動的9. 非麻痺側骨盤の挙上", unit: "点" },
-      d_10: { name: "動的10. 非麻痺側骨盤挙上時の代償動作なし", unit: "点" },
-      c_1: { name: "協調1. 上部体幹の回旋 (6回)", unit: "点" },
-      c_2: { name: "協調2. 上部体幹の回旋 (6秒以内)", unit: "点" },
-      c_3: { name: "協調3. 下部体幹の回旋 (6回)", unit: "点" },
-      c_4: { name: "協調4. 下部体幹の回旋 (6秒以内)", unit: "点" }
+      static_bal: { name: "静的座位バランス", unit: "点", computed: true },
+      dynamic_bal: { name: "動的座位バランス", unit: "点", computed: true },
+      coordination: { name: "協調性", unit: "点", computed: true }
     },
     items: [
       {

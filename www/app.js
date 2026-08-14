@@ -847,6 +847,12 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
   container.innerHTML = "";
   container.style.display = "none";
 
+  const formatVal = (v) => {
+    if (v === undefined || v === null || v === "") return "--";
+    const num = parseFloat(v);
+    return isNaN(num) ? v : Number(num.toFixed(1));
+  };
+
   // この項目が測定されている全レコードを抽出 (古い順から新しい順、時系列順)
   const targetRecords = patient.records
     .filter(r => r.evaluations && r.evaluations[evalId] !== undefined)
@@ -945,7 +951,7 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
     
     const valSpan = document.createElement("span");
     valSpan.className = "eval-detail-item-val";
-    valSpan.textContent = `${evalData} ${meta.unit || ""}`;
+    valSpan.textContent = `${formatVal(evalData)}${meta.unit ? " " + meta.unit : ""}`;
     
     itemHeader.appendChild(nameSpan);
     itemHeader.appendChild(valSpan);
@@ -1017,7 +1023,7 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
         } else if (meta && meta.unit !== undefined) {
           displayUnit = meta.unit;
         }
-        valSpan.textContent = val !== undefined ? `${val}${displayUnit ? " " + displayUnit : ""}` : "--";
+        valSpan.textContent = val !== undefined ? `${formatVal(val)}${displayUnit ? " " + displayUnit : ""}` : "--";
 
         itemHeader.appendChild(nameSpan);
         itemHeader.appendChild(valSpan);
@@ -1047,6 +1053,10 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
           if (k === "static_bal") childItems = ["s_1", "s_2", "s_3"];
           if (k === "dynamic_bal") childItems = ["d_1", "d_2", "d_3", "d_4", "d_5", "d_6", "d_7", "d_8", "d_9", "d_10"];
           if (k === "coordination") childItems = ["c_1", "c_2", "c_3", "c_4"];
+        } else if (evalId === "scim") {
+          if (k === "self_care") childItems = ["q1_feeding", "q2_bathing_upper", "q3_bathing_lower", "q4_dressing_upper", "q5_dressing_lower", "q6_grooming"];
+          if (k === "respiration_sphincter") childItems = ["q7_respiration", "q8_sphincter_urine", "q9_sphincter_bowel", "q10_toilet_use"];
+          if (k === "mobility") childItems = ["q11_mobility_bed", "q12_mobility_transfers", "q13_mobility_toilet", "q14_mobility_car", "q15_mobility_ground", "q16_mobility_ground_long", "q17_mobility_stairs", "q18_mobility_transfers_floor"];
         } else {
           childItems = [k];
         }
@@ -1080,7 +1090,7 @@ function renderChartEvalDetail(patient, evalId, selectedDate = null) {
             if (childConfig && childConfig.unit !== undefined) {
               childUnit = childConfig.unit;
             }
-            childValue.textContent = `${childVal}${childUnit ? " " + childUnit : ""}`;
+            childValue.textContent = `${formatVal(childVal)}${childUnit ? " " + childUnit : ""}`;
 
             childHeader.appendChild(childName);
             childHeader.appendChild(childValue);
@@ -3640,7 +3650,7 @@ function getDemoData() {
             walk_10m: {
               time: 15.2,
               steps: 26,
-              speed: 0.66,
+              speed: 39.6,
               stride: 38.5
             },
             tug: {
@@ -3682,9 +3692,9 @@ function getDemoData() {
             },
             pass: {
               total: 12,
-              posture_sup: 1, posture_sit: 1, posture_stand_unsupport: 0, posture_stand_on_para: 1, posture_stand_on_nonpara: 1,
-              transfer_sup_to_para: 1, transfer_sup_to_nonpara: 1, transfer_sit_to_stand: 1, transfer_stand_to_sit: 1,
-              transfer_sit_to_para: 1, transfer_sit_to_nonpara: 1, transfer_floor: 1
+              p1: 1, p2: 1, p3: 0, p4: 1, p5: 1,
+              p6: 1, p7: 1, p8: 1, p9: 1,
+              p10: 1, p11: 1, p12: 1
             },
             fim: {
               total: 58,
@@ -3707,7 +3717,9 @@ function getDemoData() {
             },
             scp: {
               total: 3.5,
-              q1a: 0.75, q1b: 0.75, q2a: 0.5, q2b: 0.5, q3a: 0.5, q3b: 0.5
+              alignment: 1.5,
+              resistance: 1.0,
+              pushing: 1.0
             },
             scim: {
               total: 35,
@@ -3795,7 +3807,7 @@ function getDemoData() {
             walk_10m: {
               time: 12.0,
               steps: 22,
-              speed: 0.83,
+              speed: 49.8,
               stride: 45.5
             },
             tug: {
@@ -3837,9 +3849,9 @@ function getDemoData() {
             },
             pass: {
               total: 22,
-              posture_sup: 2, posture_sit: 2, posture_stand_unsupport: 1, posture_stand_on_para: 2, posture_stand_on_nonpara: 2,
-              transfer_sup_to_para: 2, transfer_sup_to_nonpara: 2, transfer_sit_to_stand: 2, transfer_stand_to_sit: 2,
-              transfer_sit_to_para: 2, transfer_sit_to_nonpara: 2, transfer_floor: 1
+              p1: 2, p2: 2, p3: 1, p4: 2, p5: 2,
+              p6: 2, p7: 2, p8: 2, p9: 2,
+              p10: 2, p11: 2, p12: 1
             },
             fim: {
               total: 80,
@@ -3862,7 +3874,9 @@ function getDemoData() {
             },
             scp: {
               total: 1.5,
-              q1a: 0.25, q1b: 0.25, q2a: 0.25, q2b: 0.25, q3a: 0.25, q3b: 0.25
+              alignment: 0.5,
+              resistance: 0.5,
+              pushing: 0.5
             },
             scim: {
               total: 58,
@@ -3950,7 +3964,7 @@ function getDemoData() {
             walk_10m: {
               time: 9.5,
               steps: 18,
-              speed: 1.05,
+              speed: 63.0,
               stride: 55.6
             },
             tug: {
@@ -3992,9 +4006,9 @@ function getDemoData() {
             },
             pass: {
               total: 32,
-              posture_sup: 3, posture_sit: 3, posture_stand_unsupport: 3, posture_stand_on_para: 3, posture_stand_on_nonpara: 3,
-              transfer_sup_to_para: 3, transfer_sup_to_nonpara: 3, transfer_sit_to_stand: 3, transfer_stand_to_sit: 3,
-              transfer_sit_to_para: 3, transfer_sit_to_nonpara: 3, transfer_floor: 2
+              p1: 3, p2: 3, p3: 3, p4: 3, p5: 3,
+              p6: 3, p7: 3, p8: 3, p9: 3,
+              p10: 3, p11: 3, p12: 2
             },
             fim: {
               total: 105,
@@ -4017,7 +4031,9 @@ function getDemoData() {
             },
             scp: {
               total: 0.0,
-              q1a: 0, q1b: 0, q2a: 0, q2b: 0, q3a: 0, q3b: 0
+              alignment: 0.0,
+              resistance: 0.0,
+              pushing: 0.0
             },
             scim: {
               total: 85,
@@ -4096,7 +4112,7 @@ function getDemoData() {
               ankle_flex: { left: 15, right: 10 },
               ankle_ext: { left: 35, right: 30 }
             },
-            walk_10m: { time: 16.5, steps: 28, speed: 0.61, stride: 35.7 },
+            walk_10m: { time: 16.5, steps: 28, speed: 36.6, stride: 35.7 },
             walk_6min: { distance: 180, borg_before: 9, borg_after: 15 },
             tug: { time: 22.4 },
             frt: { reach: 14 },
@@ -4154,7 +4170,7 @@ function getDemoData() {
               ankle_flex: { left: 18, right: 15 },
               ankle_ext: { left: 40, right: 35 }
             },
-            walk_10m: { time: 11.2, steps: 21, speed: 0.89, stride: 47.6 },
+            walk_10m: { time: 11.2, steps: 21, speed: 53.4, stride: 47.6 },
             walk_6min: { distance: 265, borg_before: 8, borg_after: 12 },
             tug: { time: 14.8 },
             frt: { reach: 22 },
