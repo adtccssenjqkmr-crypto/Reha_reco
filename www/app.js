@@ -258,6 +258,17 @@ function switchView(viewId, pushToStack = true) {
     el.scrollTop = 0;
   });
 
+  // 非同期のHTMLレンダリング完了に備えて、わずかに遅延させて再実行
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    if (targetView) {
+      targetView.scrollTop = 0;
+    }
+    document.querySelectorAll(".app-view, .scroll-content, html, body, main").forEach(el => {
+      el.scrollTop = 0;
+    });
+  }, 80);
+
   // ヘッダーアクション（戻るボタンなど）の制御
   renderHeaderAction();
 }
