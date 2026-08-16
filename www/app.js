@@ -248,6 +248,16 @@ function switchView(viewId, pushToStack = true) {
   }
   state.currentView = viewId;
 
+  // 各画面のスクロール位置を最上部にリセット
+  window.scrollTo({ top: 0, behavior: "instant" });
+  if (targetView) {
+    targetView.scrollTop = 0;
+  }
+  const scrollableElements = document.querySelectorAll(".app-view, .scroll-content, html, body, main");
+  scrollableElements.forEach(el => {
+    el.scrollTop = 0;
+  });
+
   // ヘッダーアクション（戻るボタンなど）の制御
   renderHeaderAction();
 }
@@ -4218,14 +4228,8 @@ function getDemoData() {
   ];
 }
 function initPremiumStatus() {
-  const isPremium = localStorage.getItem("premium_unlocked") === "true";
-  if (isPremium) {
-    document.body.classList.remove("has-ad");
-    updatePremiumUI(true);
-  } else {
-    document.body.classList.add("has-ad");
-    updatePremiumUI(false);
-  }
+  // プレミアムプランは廃止（常に通常モード・広告表示）
+  document.body.classList.add("has-ad");
 }
 
 // プレミアムUI表示の更新
