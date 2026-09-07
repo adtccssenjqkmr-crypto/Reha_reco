@@ -1851,7 +1851,7 @@ PRESET_EVALUATIONS.pgq_short = {
 // -------------------------------------------------------------
 PRESET_EVALUATIONS.sara = {
   id: "sara",
-  name: "SARA（Scale for the Assessment and RatingのAtaxia）",
+  name: "SARA（Scale for the Assessment and Rating of Ataxia）",
   description: "脊髄小脳変性症などの運動失調症の重症度を評価します（歩行、立位、座位、言語、指追跡・指鼻・回内回外・踵脛の左右平均を含め計40点満点）。",
   inputType: "multi_scale",
   subItems: {
