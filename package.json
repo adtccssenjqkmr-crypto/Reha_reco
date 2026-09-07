@@ -1,4 +1,6 @@
 {
+  "name": "rehareco",
+  "version": "1.0.6",
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
