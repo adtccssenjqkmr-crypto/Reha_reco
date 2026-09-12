@@ -76,6 +76,8 @@ workflows:
       - name: Build iOS App and Archive
         script: |
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/App/App.xcodeproj/project.pbxproj || true
+          sed -i '' 's/CODE_SIGN_IDENTITY = "iPhone Developer";/CODE_SIGN_IDENTITY = "Apple Distribution";/g' ios/App/App.xcodeproj/project.pbxproj || true
+          sed -i '' 's/CODE_SIGN_IDENTITY = "iOS Development";/CODE_SIGN_IDENTITY = "Apple Distribution";/g' ios/App/App.xcodeproj/project.pbxproj || true
           
           xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
@@ -84,6 +86,7 @@ workflows:
             archive \
             DEVELOPMENT_TEAM=769Y9JYC3N \
             CODE_SIGN_STYLE=Manual \
+            "CODE_SIGN_IDENTITY=Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="RehaReco App Store V2" \
             PROVISIONING_PROFILE="dc941172-1d69-4efd-a7a2-a1e850fb070f"
 
