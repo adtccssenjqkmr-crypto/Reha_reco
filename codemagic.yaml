@@ -56,10 +56,13 @@ workflows:
       - name: Patch Development Team ID in Xcode project
         script: |
           sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = 769Y9JYC3N;/g' ios/App/App.xcodeproj/project.pbxproj
-      - name: Install CocoaPods
+      - name: Install CocoaPods (if Podfile exists)
         script: |
-          cd ios/App
-          pod install
+          if [ -f "ios/App/Podfile" ]; then
+            cd ios/App && pod install
+          else
+            echo "No Podfile found, using Swift Package Manager (CapApp-SPM)"
+          fi
       - name: Install Provisioning Profile
         script: |
           PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
