@@ -63,6 +63,11 @@ workflows:
         script: |
           cd ios/App
           pod install
+      - name: Install Provisioning Profile
+        script: |
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_HOME"
+          cp ios/profile.mobileprovision "$PROFILES_HOME/"
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
