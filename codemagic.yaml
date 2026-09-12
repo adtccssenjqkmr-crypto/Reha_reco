@@ -77,6 +77,7 @@ workflows:
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME" \
             --config Release \
+            --export-options-plist ios/export_options.plist \
             --archive-flags="-allowProvisioningUpdates CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=769Y9JYC3N"
     artifacts:
       - build/ios/ipa/*.ipa
