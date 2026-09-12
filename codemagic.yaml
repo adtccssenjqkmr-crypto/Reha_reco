@@ -43,6 +43,9 @@ workflows:
       branch_patterns:
         - pattern: main
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rehareco.myapp
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
@@ -63,9 +66,6 @@ workflows:
           else
             echo "No Podfile found, using Swift Package Manager (CapApp-SPM)"
           fi
-      - name: Fetch and create signing files via App Store Connect API
-        script: |
-          app-store-connect fetch-signing-files "com.rehareco.myapp" --type IOS_APP_STORE --create
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
