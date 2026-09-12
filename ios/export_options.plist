@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>app-store-connect</string>
     <key>teamID</key>
     <string>769Y9JYC3N</string>
     <key>uploadSymbols</key>
@@ -13,6 +13,11 @@
     <key>compileBitcode</key>
     <false/>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.rehareco.myapp</key>
+        <string>RehaReco App Store V2</string>
+    </dict>
 </dict>
 </plist>
