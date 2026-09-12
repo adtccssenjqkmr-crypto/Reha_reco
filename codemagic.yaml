@@ -80,6 +80,7 @@ workflows:
             archive \
             DEVELOPMENT_TEAM=769Y9JYC3N \
             CODE_SIGN_STYLE=Manual \
+            "CODE_SIGN_IDENTITY=iPhone Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="RehaReco App Store" \
             PROVISIONING_PROFILE="6d9fee35-29f3-4e23-926e-1bbff6f500f2"
 
