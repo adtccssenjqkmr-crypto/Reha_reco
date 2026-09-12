@@ -70,7 +70,7 @@ workflows:
           cp ios/profile.mobileprovision "$PROFILES_HOME/"
       - name: Set up code signing settings on Xcode project
         script: |
-          xcode-project use-profiles
+          xcode-project use-profiles --create
       - name: Build iOS App and Archive
         script: |
           xcode-project build-ipa \
