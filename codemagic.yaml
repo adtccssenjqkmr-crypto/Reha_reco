@@ -63,26 +63,20 @@ workflows:
           else
             echo "No Podfile found, using Swift Package Manager (CapApp-SPM)"
           fi
-      - name: Install Provisioning Profile
+      - name: Fetch and create signing files via App Store Connect API
         script: |
-          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PROFILES_HOME"
-          cp ios/profile.mobileprovision "$PROFILES_HOME/6d9fee35-29f3-4e23-926e-1bbff6f500f2.mobileprovision"
-          cp ios/profile.mobileprovision "$PROFILES_HOME/"
+          app-store-connect fetch-signing-files "com.rehareco.myapp" --type IOS_APP_STORE --create
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
       - name: Build iOS App and Archive
         script: |
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/App/App.xcodeproj/project.pbxproj || true
-          
           xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -config Release \
             -archivePath build/ios/xcarchive/App.xcarchive \
             archive \
-            DEVELOPMENT_TEAM=769Y9JYC3N \
-            CODE_SIGN_STYLE=Manual \
-            "CODE_SIGN_IDENTITY=iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="RehaReco App Store" \
-            PROVISIONING_PROFILE="6d9fee35-29f3-4e23-926e-1bbff6f500f2"
+            DEVELOPMENT_TEAM=769Y9JYC3N
 
           xcodebuild -exportArchive \
             -archivePath build/ios/xcarchive/App.xcarchive \
